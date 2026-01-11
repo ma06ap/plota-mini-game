@@ -2,11 +2,19 @@
 // #include <vector>
 
 #include "board.h"
+#include "turn.h"
 
 int main() {
-     Board v(4,7);
+     // Board v(4,7);
 
-     v.print();
+     // v.print();
+
+     // Turn q("man","too");
+     // std::cout << q.get() << std::endl;
+     // q.switchTurn();
+     // std::cout << q.get() << std::endl;
+     // q.switchTurn();
+     // std::cout << q.get() << std::endl;
 
 
      // std::vector<std::vector<int*>> l;
