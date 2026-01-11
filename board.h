@@ -1,5 +1,10 @@
 #include <vector>
 
+//
+#include <iostream>
+//
+
+
 #include "piece.h"
 
 
@@ -9,4 +14,7 @@ private:
 public:
      Board (int rowNumber , int columnNumber);
 
+
+     // these methods just for test
+     void print();
 };
