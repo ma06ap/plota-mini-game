@@ -1,7 +1,7 @@
-#include "./board.h"
+#include "../board.h"
 
 
-class ConnectFour : protected Board {
+class ConnectFour : public Board {
 
 
 
