@@ -16,6 +16,17 @@ Board::Board(int rowNumber , int columnNumber) {
 }
 
 
+Board::Add(Piece* piece , int rowNumber , int columnNumber) {
+     board.at(rowNumber).at(columnNumber) = piece;
+}
+
+Board::deletePiece (int rowNumber , int columnNumber) {
+     auto temp = board.at(rowNumber).at(columnNumber);
+     delete temp;
+     board.at(rowNumber).at(columnNumber) = nullptr;
+}
+
+
 // ts
 
 void Board::print() {
