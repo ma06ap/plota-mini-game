@@ -12,7 +12,5 @@ std::string Turn::get() {
      if(turn) {
           return firstTurn;
      }
-     else {
-          return secondTurn;
-     }
+     return secondTurn;
 }
