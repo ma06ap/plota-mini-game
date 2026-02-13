@@ -5,17 +5,24 @@ Board::Board(int rowNumber , int columnNumber) {
      for (auto &temp : board) {
           temp.resize(columnNumber,nullptr);
      }
-     // for (size_t i = 0; i < rowNumber; i++)
-     // {
-     //      std::cout << board.size();
-     //      for (size_t j = 0; j < columnNumber; j++)
-     //      {
-     //           std::cout << board.at(i).size();
-     //      }  
-     // }
 }
 
 
+void Board::Add(Piece* piece , int rowNumber , int columnNumber) {
+     board.at(rowNumber).at(columnNumber) = piece;
+}
+
+void Board::Delete (int rowNumber , int columnNumber) {
+     auto temp = board.at(rowNumber).at(columnNumber);
+     delete temp;
+     board.at(rowNumber).at(columnNumber) = nullptr;
+}
+
+void Board::Move (int fromRow , int fromColumn , int toRow , int toColumn) {;
+     auto temp = board.at(fromRow).at(fromColumn);
+     board.at(toRow).at(toColumn) = temp;
+     board.at(fromRow).at(fromColumn) = nullptr;
+}
 // ts
 
 void Board::print() {
