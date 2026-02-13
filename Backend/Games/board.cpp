@@ -5,14 +5,6 @@ Board::Board(int rowNumber , int columnNumber) {
      for (auto &temp : board) {
           temp.resize(columnNumber,nullptr);
      }
-     // for (size_t i = 0; i < rowNumber; i++)
-     // {
-     //      std::cout << board.size();
-     //      for (size_t j = 0; j < columnNumber; j++)
-     //      {
-     //           std::cout << board.at(i).size();
-     //      }  
-     // }
 }
 
 
