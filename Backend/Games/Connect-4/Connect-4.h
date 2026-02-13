@@ -1,8 +1,10 @@
-#include "../Board.h"
+#pragma once
+
+#include "../Game.h"
 
 
-class ConnectFour : public Board {
-
+class ConnectFour : public Game {
+    ConnectFour();
 
 
 

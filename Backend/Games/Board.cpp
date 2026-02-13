@@ -28,8 +28,11 @@ void Board::Move (int fromRow , int fromColumn , int toRow , int toColumn) {;
 void Board::print() {
      for (auto t : board) {
           for (auto y : t) {
-               std::cout << "*";
-               // y.pr
+               if (y == nullptr) {
+                    std::cout << " ";
+               } else {
+                    std::cout << "X";
+               }
           }
           std::cout << std::endl;
      }
