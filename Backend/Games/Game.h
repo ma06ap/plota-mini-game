@@ -10,7 +10,7 @@ class Game {
 protected:
      Board src;
      int id;
-     Turn turn;
+     // Turn turn;
 public:
      virtual std::string getName() const = 0;
      Game();

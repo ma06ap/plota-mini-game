@@ -1,6 +1,6 @@
 #include "Game.h"
 
-Game::Game() : src(8,8), turn("Red","Blue") {}
+Game::Game() : src(8,8) {}
 
 
 void Game::setId (int i) {
