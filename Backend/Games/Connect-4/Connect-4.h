@@ -4,7 +4,9 @@
 
 
 class ConnectFour : public Game {
+public:
     ConnectFour();
+    std::string getName() const override;
 
 
 

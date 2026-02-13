@@ -4,3 +4,7 @@
 ConnectFour::ConnectFour() : Game() {
 
 }
+
+std::string ConnectFour::getName() const {
+    return "Connect-4";
+}
