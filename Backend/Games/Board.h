@@ -6,7 +6,7 @@
 //
 
 
-#include "piece.h"
+#include "Piece.h"
 
 
 class Board {

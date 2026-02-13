@@ -1,4 +1,4 @@
-#include "board.h"
+#include "Board.h"
 
 Board::Board(int rowNumber , int columnNumber) {
      board.resize(rowNumber);

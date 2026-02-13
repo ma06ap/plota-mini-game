@@ -1,4 +1,4 @@
-#include "../board.h"
+#include "../Board.h"
 
 
 class ConnectFour : public Board {
