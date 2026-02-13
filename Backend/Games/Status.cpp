@@ -4,4 +4,6 @@
 
 #include "Status.h"
 
-Status::Status(std::string str1 , std::string str2) : his(8,8) , turn(str1,str2) {}
+Status::Status(std::string str, Board &board) : his(board.getRows(),board.getColumns()) , turn(str) {
+    his.copy(board);
+}

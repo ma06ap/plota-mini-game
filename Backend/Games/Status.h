@@ -10,8 +10,8 @@
 class Status {
 public:
     Board his;
-    Turn turn;
-    Status(std::string str1, std::string str2);
+    std::string turn;
+    Status(std::string str, Board &board);
 };
 
 
