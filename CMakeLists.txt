@@ -11,4 +11,6 @@ add_executable(plota_mini_game main.cpp
         Backend/Games/Turn.cpp
         Backend/Games/Connect-4/Connect-4.cpp
         Backend/Games/Connect-4/Connect-4.h
-        Backend/Tools/Time.cpp)
+        Backend/Tools/Time.cpp
+        Backend/Games/Status.cpp
+        Backend/Games/Status.h)
