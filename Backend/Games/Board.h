@@ -6,18 +6,23 @@
 //
 
 
+#include <oneapi/tbb/detail/_template_helpers.h>
+
 #include "Piece.h"
 
 
 class Board {
 private:
-     std::vector<std::vector<Piece*>> board;     
+     std::vector<std::vector<Piece*>> board;
+     int rows, columns;
 public:
      Board (int rowNumber , int columnNumber);
      void Add (Piece* piece , int rowNumber , int columnNumber);
      void Delete (int rowNumber , int columnNumber);
      void Move (int fromRow , int fromColumn , int toRow , int toColumn);
-
+     void copy(Board &board);
+     int getRows () { return rows; }
+     int getColumns () { return columns; }
 
      // these methods just for test
      void print();

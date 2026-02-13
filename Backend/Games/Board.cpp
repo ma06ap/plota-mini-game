@@ -5,6 +5,8 @@ Board::Board(int rowNumber , int columnNumber) {
      for (auto &temp : board) {
           temp.resize(columnNumber,nullptr);
      }
+     rows = rowNumber;
+     columns = columnNumber;
 }
 
 
@@ -23,6 +25,29 @@ void Board::Move (int fromRow , int fromColumn , int toRow , int toColumn) {;
      board.at(toRow).at(toColumn) = temp;
      board.at(fromRow).at(fromColumn) = nullptr;
 }
+
+void Board::copy(Board &board) {
+     if (rows == board.getRows() && columns == board.getColumns()) {
+          for (int i = 0; i < rows; i++) {
+               for (int j = 0; j < columns; j++) {
+                    auto temp2 = board.board.at(i).at(j);
+                    if (temp2 != nullptr) {
+                         Piece* newPiece = new Piece();
+                         newPiece->copy(*temp2);
+                         this->board.at(i).at(j) = newPiece;
+                    } else {
+                         this->board.at(i).at(j) = nullptr;
+                    }
+               }
+          }
+     }
+     else {
+          throw std::invalid_argument("Board does not have the same size as the board");
+     }
+}
+
+
+
 // ts
 
 void Board::print() {
