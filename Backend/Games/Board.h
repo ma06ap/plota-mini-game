@@ -23,7 +23,7 @@ public:
      void copy(Board &board);
      int getRows () { return rows; }
      int getColumns () { return columns; }
-
+     Piece* getPiece (int row , int column);
      // these methods just for test
      void print();
 };

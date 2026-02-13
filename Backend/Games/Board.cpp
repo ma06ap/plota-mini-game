@@ -50,6 +50,10 @@ void Board::copy(Board &board) {
 
 // ts
 
+Piece* Board::getPiece(int row, int column) {
+     return board.at(row).at(column);
+}
+
 void Board::print() {
      for (auto t : board) {
           for (auto y : t) {
