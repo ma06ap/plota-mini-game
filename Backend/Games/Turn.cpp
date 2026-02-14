@@ -6,9 +6,16 @@ Turn::Turn(std::string turn1,std::string turn2): firstTurn(turn1) , secondTurn(t
 
 void Turn::switchTurn() {
      turn^=1;
+}
+
+std::string Turn::getOther() const {
+     if (turn) {
+          return secondTurn;
+     }
+     return firstTurn;
 };
 
-std::string Turn::get() {
+std::string Turn::get() const {
      if(turn) {
           return firstTurn;
      }

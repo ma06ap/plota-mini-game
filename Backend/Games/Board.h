@@ -21,9 +21,9 @@ public:
      void Delete (int rowNumber , int columnNumber);
      void Move (int fromRow , int fromColumn , int toRow , int toColumn);
      void copy(Board &board);
-     int getRows () { return rows; }
-     int getColumns () { return columns; }
-     Piece* getPiece (int row , int column);
+     int getRows () const { return rows; }
+     int getColumns () const { return columns; }
+     Piece* getPiece (int row , int column) const;
      // these methods just for test
      void print();
 };

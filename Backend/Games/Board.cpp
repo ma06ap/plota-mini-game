@@ -50,7 +50,7 @@ void Board::copy(Board &board) {
 
 // ts
 
-Piece* Board::getPiece(int row, int column) {
+Piece* Board::getPiece (int row, int column) const {
      return board.at(row).at(column);
 }
 

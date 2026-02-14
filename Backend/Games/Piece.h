@@ -13,4 +13,5 @@ public:
      std::string getRole() const;
      std::string getColor() const;
      void copy(Piece &p);
+     void setColor(std::string color);
 };
