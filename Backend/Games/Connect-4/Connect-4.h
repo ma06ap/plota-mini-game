@@ -22,4 +22,6 @@ public:
     bool checkVertical();
     bool checkDiagonal1();
     bool checkDiagonal2();
+    void printBoard() const override;
+    std::string input(std::string prompt) override;
 };

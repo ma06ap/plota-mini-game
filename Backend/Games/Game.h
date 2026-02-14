@@ -23,4 +23,6 @@ public:
      Game();
      void setId (int i);
      int getId() const;
+     virtual void printBoard() const = 0;
+     virtual std::string input(std::string prompt) = 0;
 };

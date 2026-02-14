@@ -31,7 +31,7 @@ void ConnectFour::nextTurn() {
 }
 
 bool ConnectFour::checkWin() {
-    // remained
+    return checkDiagonal1() || checkDiagonal2() || checkHorizontal() || checkVertical() ;
 }
 
 bool ConnectFour::checkDraw() {
@@ -145,4 +145,40 @@ bool ConnectFour::checkDiagonal2() {
         }
     }
     return false;
+}
+
+void ConnectFour::printBoard() const {
+    for (int i = 0; i < src.getRows(); ++i) {
+        for (int j = 0; j < src.getColumns(); ++j) {
+            if (src.getPiece(i,j) == nullptr) {
+                std::cout << ". ";
+            } else if (src.getPiece(i,j)->getColor() == "Red") {
+                std::cout << "R ";
+            } else {
+                std::cout << "Y ";
+            }
+        }
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
+}
+
+std::string ConnectFour::input(std::string prompt) {
+    char input = prompt[4];
+    int col = input-'0';
+    std::cout << col << std::endl;
+    this->addColumn(col);
+    if (this->checkWin()) {
+        return (turn.get() + " " + "Win");
+    }
+    if (this->checkDraw()) {
+        return "Draw";
+    }
+    this->nextTurn();
+    auto tmp = this->allowColumns();
+    std::string result = turn.get() + " ";
+    for (int c : tmp) {
+        result += std::to_string(c) + " ";
+    }
+    return result;
 }
