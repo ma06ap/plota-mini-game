@@ -11,14 +11,21 @@ std::string ConnectFour::getName() const {
 }
 
 void ConnectFour::addColumn(int col) {
+    col--;
     if (col < 0 || col >= src.getColumns()) {
         throw std::out_of_range("Column index out of range");
     }
     Piece *tmp = new Piece(turn.get());
     for (int i = src.getRows() - 1; i >= 0; --i) {
-        if (src.getPiece(i,col)==nullptr) {
+        if (src.getPiece(i,col)!=nullptr) {
             continue;
         }
-        src.Add(tmp, i + 1, col);
+        src.Add(tmp, i , col);
+        break;
     }
+}
+
+void ConnectFour::nextTurn() {
+    turn.switchTurn();
+    // src.print();
 }

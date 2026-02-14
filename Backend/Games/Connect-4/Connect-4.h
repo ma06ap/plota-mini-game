@@ -10,6 +10,11 @@ public:
     ConnectFour();
     std::string getName() const override;
     void addColumn(int col);
-
-
+    void nextTurn ();
+    // bool checkWin();
+    // std::vector<int> allowColumns ();
+    // bool checkHorizontal();
+    // bool checkVertical();
+    // bool checkDiagonal1();
+    // bool checkDiagonal2();
 };

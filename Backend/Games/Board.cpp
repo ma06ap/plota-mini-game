@@ -58,12 +58,18 @@ void Board::print() {
      for (auto t : board) {
           for (auto y : t) {
                if (y == nullptr) {
-                    std::cout << " ";
+                    std::cout << "O";
                } else {
-                    std::cout << "X";
+                    if (y->getColor() == "Red") {
+                         std::cout << "R";
+                    }
+                    else {
+                         std::cout << "Y";
+                    }
                }
           }
           std::cout << std::endl;
      }
+     std::cout << "-------------" <<std::endl;
 }
 
