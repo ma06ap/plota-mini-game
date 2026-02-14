@@ -118,8 +118,9 @@ int main() {
     // f.addColumn(4);
     // f.printBoard();
 
-    ConnectFour h;
+    Othello h;
     std::string prompt;
+    h.printBoard();
     while (true) {
         std::getline(std::cin, prompt);
         std::string result = h.input(prompt);

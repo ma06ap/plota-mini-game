@@ -181,6 +181,30 @@ void Othello::nextTurn() {
     turn.switchTurn();
 }
 
+std::string Othello::getWinner() const {
+    int b = 0;
+    int w = 0;
+    for (int i = 0; i < src.getRows(); ++i) {
+        for (int j = 0; j < src.getColumns(); ++j) {
+            Piece* piece = src.getPiece(i, j);
+            if (piece != nullptr) {
+                if (piece->getColor() == "Black") {
+                    b++;
+                } else {
+                    w++;
+                }
+            }
+        }
+    }
+    if (b == w) {
+        return "Draw";
+    } else if (b > w) {
+        return ("Black " + std::to_string(b) + " " + std::to_string(w));
+    } else {
+        return ("White " + std::to_string(w) + " " + std::to_string(b));
+    }
+}
+
 std::vector<Location> Othello::allowed() {
     std::vector<Location> result;
     std::string currentColor = turn.get();
@@ -287,5 +311,28 @@ void Othello::printBoard() const {
 
 std::string Othello::getCurrentPlayer() const {
     return turn.get();
+}
+
+std::string Othello::input(std::string prompt) {
+    char ii = prompt[4];
+    char jj = prompt[6];
+    int i = ii - '0';
+    int j = jj - '0';
+    Location l(i, j);
+    this->addPiece(l);
+    this->nextTurn();
+    auto tmp = this->allowed();
+    if (tmp.empty()) {
+        this->nextTurn();
+        tmp = this->allowed();
+        if (tmp.empty()) {
+            return getWinner();
+        }
+    }
+    std::string result;
+    for (auto &loc : tmp) {
+        result += std::to_string(loc.getI()) +" " + std::to_string(loc.getJ()) + " ";
+    }
+    return (turn.get() + " " + result);
 }
 

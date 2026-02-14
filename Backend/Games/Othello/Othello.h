@@ -20,10 +20,12 @@ public:
     bool checkArround(Location& l) const;
     void addPiece(Location &l);
     void nextTurn();
+    std::string getWinner() const;
     std::vector<Location> allowed();
     std::string getName() const;
     void printBoard() const;
     std::string getCurrentPlayer() const;
+    std::string input(std::string prompt) override;
 };
 
 
