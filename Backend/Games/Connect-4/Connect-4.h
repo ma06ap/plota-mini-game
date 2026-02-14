@@ -4,10 +4,12 @@
 #include <mutex>
 #include "../Game.h"
 #include "../Turn.h"
+#include "../Location.h"
 
 
 class ConnectFour : public Game {
     Turn turn;
+    Location location[4];
 public:
     ConnectFour();
     std::string getName() const override;

@@ -30,6 +30,10 @@ void ConnectFour::nextTurn() {
     // src.print();
 }
 
+bool ConnectFour::checkWin() {
+
+}
+
 bool ConnectFour::checkDraw() {
     for (int i = 0; i < src.getColumns(); ++i) {
         if (src.getPiece(0,i) == nullptr) {
@@ -56,6 +60,14 @@ bool ConnectFour::checkHorizontal() {
             if (src.getPiece(i,j) != nullptr && src.getPiece(i,j)->getColor() == turn.get()) {
                 count++;
                 if (count == 4) {
+                    location[0].setI(i);
+                    location[0].setJ(j);
+                    location[1].setI(i-1);
+                    location[1].setJ(j);
+                    location[2].setI(i-2);
+                    location[2].setJ(j);
+                    location[3].setI(i-3);
+                    location[3].setJ(j);
                     return true;
                 }
             } else {
@@ -73,6 +85,14 @@ bool ConnectFour::checkVertical() {
             if (src.getPiece(j,i) != nullptr && src.getPiece(j,i)->getColor() == turn.get()) {
                 count++;
                 if (count == 4) {
+                    location[0].setJ(j);
+                    location[0].setI(i);
+                    location[1].setJ(j-1);
+                    location[1].setI(i);
+                    location[2].setJ(j-2);
+                    location[2].setI(i);
+                    location[3].setJ(j-3);
+                    location[3].setI(i);
                     return true;
                 }
             } else {
@@ -90,6 +110,14 @@ bool ConnectFour::checkDiagonal1() {
                 src.getPiece(i+1,j+1) != nullptr && src.getPiece(i+1,j+1)->getColor() == turn.get() &&
                 src.getPiece(i+2,j+2) != nullptr && src.getPiece(i+2,j+2)->getColor() == turn.get() &&
                 src.getPiece(i+3,j+3) != nullptr && src.getPiece(i+3,j+3)->getColor() == turn.get()) {
+                location[0].setI(i);
+                location[0].setJ(j);
+                location[1].setI(i+1);
+                location[1].setJ(j+1);
+                location[2].setI(i+2);
+                location[2].setJ(j+2);
+                location[3].setI(i+3);
+                location[3].setJ(j+3);
                 return true;
             }
         }
@@ -104,6 +132,14 @@ bool ConnectFour::checkDiagonal2() {
                 src.getPiece(i+1,j-1) != nullptr && src.getPiece(i+1,j-1)->getColor() == turn.get() &&
                 src.getPiece(i+2,j-2) != nullptr && src.getPiece(i+2,j-2)->getColor() == turn.get() &&
                 src.getPiece(i+3,j-3) != nullptr && src.getPiece(i+3,j-3)->getColor() == turn.get()) {
+                location[0].setI(i);
+                location[0].setJ(j);
+                location[1].setI(i+1);
+                location[1].setJ(j-1);
+                location[2].setI(i+2);
+                location[2].setJ(j-2);
+                location[3].setI(i+3);
+                location[3].setJ(j-3);
                 return true;
             }
         }
