@@ -14,4 +14,8 @@ add_executable(plota_mini_game main.cpp
         Backend/Tools/Time.cpp
         Backend/Games/Status.cpp
         Backend/Games/Status.h
-        Backend/Games/Location.h)
+        Backend/Games/Location.h
+        Backend/Games/Othello/Othello.cpp
+        Backend/Games/Othello/Othello.h
+        Backend/Games/Checkers.cpp
+        Backend/Games/Checkers.h)

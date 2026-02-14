@@ -31,7 +31,7 @@ void ConnectFour::nextTurn() {
 }
 
 bool ConnectFour::checkWin() {
-
+    // remained
 }
 
 bool ConnectFour::checkDraw() {

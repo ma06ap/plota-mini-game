@@ -18,6 +18,7 @@ protected:
      std::vector<Status> history;
      // Turn turn;
 public:
+     virtual ~Game() = default;
      virtual std::string getName() const = 0;
      Game();
      void setId (int i);

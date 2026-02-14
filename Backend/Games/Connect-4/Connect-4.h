@@ -7,7 +7,7 @@
 #include "../Location.h"
 
 
-class ConnectFour : public Game {
+class ConnectFour final : public Game  {
     Turn turn;
     Location location[4];
 public:
