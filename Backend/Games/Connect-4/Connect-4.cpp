@@ -3,7 +3,6 @@
 
 ConnectFour::ConnectFour() : Game() , turn("Red","Yellow") {
     src = Board(6, 7);
-    // history.push_back(Status(src, 0));
 }
 
 std::string ConnectFour::getName() const {
@@ -27,7 +26,6 @@ void ConnectFour::addColumn(int col) {
 
 void ConnectFour::nextTurn() {
     turn.switchTurn();
-    // src.print();
 }
 
 bool ConnectFour::checkWin() {
@@ -164,6 +162,29 @@ void ConnectFour::printBoard() const {
 }
 
 std::string ConnectFour::input(std::string prompt) {
+    if (prompt == "start") {
+        auto tmp = this->allowColumns();
+        std::string result = turn.get() + " ";
+        for (int c : tmp) {
+            result += std::to_string(c) + " ";
+        }
+        return result;
+    }
+
+    if (prompt == "getboard") {
+        std::string result;
+        for (int i = 0; i < src.getRows(); ++i) {
+            for (int j = 0; j < src.getColumns(); ++j) {
+                Piece* piece = src.getPiece(i, j);
+                if (piece != nullptr) {
+                    result += std::to_string(i) + " " + std::to_string(j) + " ";
+                    result += piece->getColor() + " ";
+                }
+            }
+        }
+        return result;
+    }
+
     char input = prompt[4];
     int col = input-'0';
     std::cout << col << std::endl;

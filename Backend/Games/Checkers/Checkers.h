@@ -8,27 +8,40 @@
 #include "../Game.h"
 #include "../Turn.h"
 #include "../Location.h"
-#include <utility>
+#include <vector>
 
 class Checkers final : public Game {
     Turn turn;
-    bool lastMoveWasJump;
-    Location lastJumpLocation;
+    Location selectedPiece;
+    bool pieceSelected;
+    bool mustContinueJump;
 
-    bool isValidSimpleMove(const Location& from, const Location& to) const;
-    bool isValidJumpMove(const Location& from, const Location& to) const;
-    bool canJumpFrom(const Location& loc) const;
-    void promoteToKing(const Location& loc);
+
+    bool canJump(const Location& from, const Location& to) const;
+    bool canSimpleMove(const Location& from, const Location& to) const;
+    std::vector<Location> getJumpMovesFrom(const Location& from) const;
+    std::vector<Location> getSimpleMovesFrom(const Location& from) const;
+    bool hasJumpMoves() const;
+    void promoteToKingIfNeeded(const Location& loc);
 
 public:
     Checkers();
     std::string getName() const override;
-    std::vector<std::pair<Location, Location>> allowed() const;
-    void movePiece(Location& last,Location &next);
-    void nextTurn();
     void printBoard() const override;
-    std::string getCurrentPlayer() const;
     std::string input(std::string prompt) override;
+
+    std::vector<Location> allowedPieces();
+    void selectPiece(const Location& loc);
+    std::vector<Location> allowedMoves();
+    void move(const Location& to);
+    void nextTurn();
+
+    std::string getCurrentPlayer() const;
+    Location getSelectedPiece() const { return selectedPiece; }
+    bool isPieceSelected() const { return pieceSelected; }
+
+    std::string getBoard() const;
+    std::string getWinner() const;
 };
 
 

@@ -6,8 +6,6 @@
 //
 
 
-#include <oneapi/tbb/detail/_template_helpers.h>
-
 #include "Piece.h"
 
 

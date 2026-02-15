@@ -22,8 +22,8 @@ public:
     void nextTurn();
     std::string getWinner() const;
     std::vector<Location> allowed();
-    std::string getName() const;
-    void printBoard() const;
+    std::string getName() const override;
+    void printBoard() const override;
     std::string getCurrentPlayer() const;
     std::string input(std::string prompt) override;
 };

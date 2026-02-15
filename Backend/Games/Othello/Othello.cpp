@@ -7,7 +7,7 @@
 
 
 bool Othello::checkUp(Location &l, bool left, bool right) const {
-    // bool result = false;
+
     int i = l.getI();
     int j = l.getJ();
     i--;
@@ -73,7 +73,6 @@ bool Othello::checkRight(Location &l, bool up, bool down) const {
 
 Othello::Othello() : Game(), turn("Black","White") {
      src = Board(8, 8);
-     // history.push_back(Status(src, 0));
     auto tmp1 = new Piece(turn.get());
     auto tmp2 = new Piece(turn.get());
     src.Add(tmp1, 3, 3);
@@ -125,14 +124,11 @@ bool Othello::checkArround(Location &l) const {
 void Othello::addPiece(Location &l) {
     auto tmp = new Piece(turn.get());
     src.Add(tmp, l.getI(), l.getJ());
-    // history.push_back(Status(src, 0));
-    // turn.switchTurn();
-    // change color of pieces that should be changed
      int i = l.getI();
      int j = l.getJ();
      std::string opponentColor = turn.getOther();
 
-     // Check all 8 directions
+
      int directions[8][2] = {
          {-1, 0},  // up
          {1, 0},   // down
@@ -152,8 +148,6 @@ void Othello::addPiece(Location &l) {
          int y = j + dj;
 
          std::vector<Location> piecesToFlip;
-
-         // Move in the direction and check for opponent pieces
          while (x >= 0 && x < src.getRows() && y >= 0 && y < src.getColumns()) {
              Piece* piece = src.getPiece(x, y);
 
@@ -210,17 +204,16 @@ std::vector<Location> Othello::allowed() {
     std::string currentColor = turn.get();
     std::string opponentColor = turn.getOther();
 
-    // Check all empty cells
     for (int row = 0; row < src.getRows(); ++row) {
         for (int col = 0; col < src.getColumns(); ++col) {
-            // Skip if cell is not empty
+
             if (src.getPiece(row, col) != nullptr) {
                 continue;
             }
 
             bool isValid = false;
 
-            // Check all 8 directions
+
             int directions[8][2] = {
                 {-1, 0},  // up
                 {1, 0},   // down
@@ -241,24 +234,22 @@ std::vector<Location> Othello::allowed() {
 
                 bool foundOpponent = false;
 
-                // Move in the direction and check for opponent pieces
+
                 while (i >= 0 && i < src.getRows() && j >= 0 && j < src.getColumns()) {
                     Piece* piece = src.getPiece(i, j);
 
                     if (piece == nullptr) {
-                        // Empty cell, can't flip
                         break;
                     }
 
                     if (piece->getColor() == opponentColor) {
-                        // Found opponent piece
+
                         foundOpponent = true;
                         i += di;
                         j += dj;
                     } else if (piece->getColor() == currentColor) {
-                        // Found our piece
+
                         if (foundOpponent) {
-                            // Valid move: we can flip opponent pieces
                             isValid = true;
                         }
                         break;
@@ -314,6 +305,28 @@ std::string Othello::getCurrentPlayer() const {
 }
 
 std::string Othello::input(std::string prompt) {
+    if (prompt == "start") {
+        auto tmp = this->allowed();
+        std::string result = turn.get() + " ";
+        for (auto &loc : tmp) {
+            result += std::to_string(loc.getI()) + " " + std::to_string(loc.getJ()) + " ";
+        }
+        return result;
+    }
+    if (prompt == "getboard") {
+        std::string result;
+        for (int i = 0; i < src.getRows(); ++i) {
+            for (int j = 0; j < src.getColumns(); ++j) {
+                Piece* piece = src.getPiece(i, j);
+                if (piece != nullptr) {
+                    result += std::to_string(i) + " " + std::to_string(j) + " ";
+                    result += piece->getColor() + " ";
+                }
+            }
+        }
+        return result;
+    }
+
     char ii = prompt[4];
     char jj = prompt[6];
     int i = ii - '0';

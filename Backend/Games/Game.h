@@ -15,8 +15,6 @@ class Game {
 protected:
      Board src;
      int id;
-     std::vector<Status> history;
-     // Turn turn;
 public:
      virtual ~Game() = default;
      virtual std::string getName() const = 0;

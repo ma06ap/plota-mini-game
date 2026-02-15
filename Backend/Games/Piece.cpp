@@ -26,3 +26,7 @@ void Piece::copy(Piece &p) {
 void Piece::setColor(std::string _color) {
     color = _color;
 }
+
+void Piece::setRole(std::string _role) {
+    role = _role;
+}
