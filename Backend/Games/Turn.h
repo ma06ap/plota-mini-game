@@ -10,6 +10,7 @@ private:
 public:
      Turn(std::string turn1,std::string turn2);
      void switchTurn();
-     std::string get();
+     std::string getOther() const;
+     std::string get() const;
 
 };
