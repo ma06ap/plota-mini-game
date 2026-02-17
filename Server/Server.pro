@@ -8,6 +8,7 @@ TEMPLATE = app
 INCLUDEPATH += $$PWD/..
 
 SOURCES += \
+    AuthHandler.cpp \
     main.cpp \
     GameServer.cpp \
     ServerWindow.cpp \
@@ -22,6 +23,7 @@ SOURCES += \
     $$PWD/../Backend/Tools/Time.cpp
 
 HEADERS += \
+    AuthHandler.h \
     GameServer.h \
     ServerWindow.h \
     $$PWD/../Backend/Games/Board.h \

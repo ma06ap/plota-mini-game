@@ -5,6 +5,7 @@
 GameServer::GameServer(QObject *parent) : QObject(parent) {
     server = new QTcpServer(this);
     gameLogic = nullptr;
+    auth = new AuthHandler("users.csv");
 }
 
 bool GameServer::start(int port) {
@@ -35,8 +36,7 @@ void GameServer::onNewConnection() {
     emit logMessage("Client connected. IP: " + socket->peerAddress().toString());
     emit playerCountChanged(clients.size());
 
-    if (gameLogic != nullptr && clients.size() == 2) {
-        broadcastGameStart();
+    if (gameLogic != nullptr && clients.size() >= 2) {
     }
 }
 
@@ -47,14 +47,47 @@ void GameServer::onReadyRead() {
     while (senderSocket->canReadLine()) {
         QString data = QString::fromUtf8(senderSocket->readLine()).trimmed();
 
-        if(data.startsWith("SELECT_GAME") || data.startsWith("CLICK"))
-            emit logMessage("Cmd from client: " + data);
+        if (!data.startsWith("CLICK")) {
+            emit logMessage("Cmd: " + data);
+        }
 
-        if (data.startsWith("SELECT_GAME:")) {
+        if (data.startsWith("LOGIN:")) {
+            QStringList parts = data.split(":");
+            if (parts.size() == 3) {
+                bool ok = auth->login(parts[1], parts[2]);
+                if (ok) {
+                    sendToClient(senderSocket, "LOGIN_SUCCESS");
+                    emit logMessage("User logged in: " + parts[1]);
+                } else {
+                    sendToClient(senderSocket, "LOGIN_FAIL");
+                    emit logMessage("Failed login attempt: " + parts[1]);
+                }
+            }
+        }
+        else if (data.startsWith("SIGNUP:")) {
+            QStringList parts = data.split(":");
+            if (parts.size() == 3) {
+                bool ok = auth->signup(parts[1], parts[2]);
+                if (ok) {
+                    sendToClient(senderSocket, "SIGNUP_SUCCESS");
+                    emit logMessage("New user registered: " + parts[1]);
+                } else {
+                    sendToClient(senderSocket, "SIGNUP_FAIL");
+                }
+            }
+        }
+
+        else if (data.startsWith("SELECT_GAME:")) {
             QString gameName = data.mid(12);
             resetGame(gameName);
-            if (clients.size() == 2) broadcastGameStart();
+
+            if (clients.size() >= 2) {
+                broadcastGameStart();
+            } else {
+                emit logMessage("Game selected (" + gameName + "). Waiting for opponent...");
+            }
         }
+
         else if (data.startsWith("CLICK:")) {
             if (!gameLogic) return;
 
@@ -68,16 +101,23 @@ void GameServer::onReadyRead() {
                 try {
                     if (name == "Checkers") {
                         Checkers* chk = dynamic_cast<Checkers*>(gameLogic);
-                        if (chk->isPieceSelected()) result = gameLogic->input("move " + r + " " + c);
-                        else result = gameLogic->input("select " + r + " " + c);
-                    } else if (name == "Othello") {
+                        if (chk->isPieceSelected()) {
+                            result = gameLogic->input("move " + r + " " + c);
+                        } else {
+                            result = gameLogic->input("select " + r + " " + c);
+                        }
+                    }
+                    else if (name == "Othello") {
                         result = gameLogic->input("put " + r + " " + c);
-                    } else if (name == "Connect-4") {
+                    }
+                    else if (name == "Connect-4") {
                         result = gameLogic->input("put " + c);
                     }
 
                     emit logMessage("Logic Result: " + QString::fromStdString(result));
+
                     broadcastBoard();
+
                 } catch (const std::exception& e) {
                     emit logMessage("Logic Error: " + QString(e.what()));
                 }
@@ -98,8 +138,10 @@ void GameServer::resetGame(QString gameName) {
 
 void GameServer::broadcastGameStart() {
     if (!gameLogic) return;
-    emit logMessage("Broadcasting Game Start...");
+
+    emit logMessage("Broadcasting START_GAME to all clients...");
     QString type = QString::fromStdString(gameLogic->getName());
+
     for (QTcpSocket* client : clients) {
         sendToClient(client, "START_GAME:" + type);
     }
@@ -125,6 +167,7 @@ void GameServer::onDisconnected() {
     QTcpSocket *socket = qobject_cast<QTcpSocket*>(sender());
     clients.removeAll(socket);
     socket->deleteLater();
+
     emit logMessage("Client disconnected.");
     emit playerCountChanged(clients.size());
 

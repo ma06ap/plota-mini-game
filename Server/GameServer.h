@@ -5,7 +5,7 @@
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QList>
-
+#include "AuthHandler.h"
 #include "Backend/Games/Checkers/Checkers.h"
 #include "Backend/Games/Othello/Othello.h"
 #include "Backend/Games/Connect-4/Connect-4.h"
@@ -31,6 +31,7 @@ private:
     QTcpServer *server;
     QList<QTcpSocket*> clients;
     Game *gameLogic;
+    AuthHandler *auth;
 
     void broadcastGameStart();
     void broadcastBoard();
