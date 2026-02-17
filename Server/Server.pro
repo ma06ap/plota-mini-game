@@ -1,27 +1,39 @@
-QT       += core gui
-QT += network
+QT       += core network widgets
+QT       -= gui
 
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
-
+TARGET = PlotaServer
 CONFIG += c++17
+TEMPLATE = app
 
-# You can make your code fail to compile if it uses deprecated APIs.
-# In order to do so, uncomment the following line.
-#DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
+INCLUDEPATH += $$PWD/..
 
 SOURCES += \
-    channels.cpp \
     main.cpp \
-    widget.cpp
+    GameServer.cpp \
+    ServerWindow.cpp \
+    $$PWD/../Backend/Games/Board.cpp \
+    $$PWD/../Backend/Games/Game.cpp \
+    $$PWD/../Backend/Games/Piece.cpp \
+    $$PWD/../Backend/Games/Turn.cpp \
+    $$PWD/../Backend/Games/Status.cpp \
+    $$PWD/../Backend/Games/Othello/Othello.cpp \
+    $$PWD/../Backend/Games/Checkers/Checkers.cpp \
+    $$PWD/../Backend/Games/Connect-4/Connect-4.cpp \
+    $$PWD/../Backend/Tools/Time.cpp
 
 HEADERS += \
-    channels.h \
-    widget.h
+    GameServer.h \
+    ServerWindow.h \
+    $$PWD/../Backend/Games/Board.h \
+    $$PWD/../Backend/Games/Game.h \
+    $$PWD/../Backend/Games/Piece.h \
+    $$PWD/../Backend/Games/Turn.h \
+    $$PWD/../Backend/Games/Status.h \
+    $$PWD/../Backend/Games/Location.h \
+    $$PWD/../Backend/Games/Othello/Othello.h \
+    $$PWD/../Backend/Games/Checkers/Checkers.h \
+    $$PWD/../Backend/Games/Connect-4/Connect-4.h \
+    $$PWD/../Backend/Tools/Time.h
 
 FORMS += \
-    widget.ui
-
-# Default rules for deployment.
-qnx: target.path = /tmp/$${TARGET}/bin
-else: unix:!android: target.path = /opt/$${TARGET}/bin
-!isEmpty(target.path): INSTALLS += target
+    ServerWindow.ui

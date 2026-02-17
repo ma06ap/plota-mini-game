@@ -72,7 +72,7 @@ bool Othello::checkRight(Location &l, bool up, bool down) const {
 }
 
 Othello::Othello() : Game(), turn("Black","White") {
-     src = Board(8, 8);
+    src = Board(8, 8);
     auto tmp1 = new Piece(turn.get());
     auto tmp2 = new Piece(turn.get());
     src.Add(tmp1, 3, 3);
@@ -105,7 +105,10 @@ bool Othello::checkArround(Location &l) const {
     if (j == 7) {
         left = false;
     }
-    bool result[4](false);
+
+    // *** اصلاح شده ***
+    bool result[4] = {false};
+
     if (up) {
         result[0] = checkUp(l, left, right);
     }
@@ -124,51 +127,51 @@ bool Othello::checkArround(Location &l) const {
 void Othello::addPiece(Location &l) {
     auto tmp = new Piece(turn.get());
     src.Add(tmp, l.getI(), l.getJ());
-     int i = l.getI();
-     int j = l.getJ();
-     std::string opponentColor = turn.getOther();
+    int i = l.getI();
+    int j = l.getJ();
+    std::string opponentColor = turn.getOther();
 
 
-     int directions[8][2] = {
-         {-1, 0},  // up
-         {1, 0},   // down
-         {0, -1},  // left
-         {0, 1},   // right
-         {-1, -1}, // up-left
-         {-1, 1},  // up-right
-         {1, -1},  // down-left
-         {1, 1}    // down-right
-     };
+    int directions[8][2] = {
+        {-1, 0},  // up
+        {1, 0},   // down
+        {0, -1},  // left
+        {0, 1},   // right
+        {-1, -1}, // up-left
+        {-1, 1},  // up-right
+        {1, -1},  // down-left
+        {1, 1}    // down-right
+    };
 
-     for (int dir = 0; dir < 8; ++dir) {
-         int di = directions[dir][0];
-         int dj = directions[dir][1];
+    for (int dir = 0; dir < 8; ++dir) {
+        int di = directions[dir][0];
+        int dj = directions[dir][1];
 
-         int x = i + di;
-         int y = j + dj;
+        int x = i + di;
+        int y = j + dj;
 
-         std::vector<Location> piecesToFlip;
-         while (x >= 0 && x < src.getRows() && y >= 0 && y < src.getColumns()) {
-             Piece* piece = src.getPiece(x, y);
+        std::vector<Location> piecesToFlip;
+        while (x >= 0 && x < src.getRows() && y >= 0 && y < src.getColumns()) {
+            Piece* piece = src.getPiece(x, y);
 
-             if (piece == nullptr) {
-                 break;
-             }
+            if (piece == nullptr) {
+                break;
+            }
 
-             if (piece->getColor() == opponentColor) {
-                 piecesToFlip.push_back(Location(x, y));
-                 x += di;
-                 y += dj;
-             } else if (piece->getColor() == turn.get()) {
-                 for (const auto& loc : piecesToFlip) {
-                     src.getPiece(loc.getI(), loc.getJ())->setColor(turn.get());
-                 }
-                 break;
-             } else {
-                 break;
-             }
-         }
-     }
+            if (piece->getColor() == opponentColor) {
+                piecesToFlip.push_back(Location(x, y));
+                x += di;
+                y += dj;
+            } else if (piece->getColor() == turn.get()) {
+                for (const auto& loc : piecesToFlip) {
+                    src.getPiece(loc.getI(), loc.getJ())->setColor(turn.get());
+                }
+                break;
+            } else {
+                break;
+            }
+        }
+    }
 }
 
 void Othello::nextTurn() {
@@ -348,4 +351,3 @@ std::string Othello::input(std::string prompt) {
     }
     return (turn.get() + " " + result);
 }
-
