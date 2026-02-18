@@ -356,7 +356,7 @@ void Widget::onReadyRead() {
 }
 
 void Widget::handleStateMessage(QString state) {
-    if (activeGame != "Checkers") return;
+    if (activeGame != "Checkers" && activeGame != "Othello") return;
 
     clearCheckersHighlights();
 
@@ -364,30 +364,30 @@ void Widget::handleStateMessage(QString state) {
     if (tokens.size() < 1) return;
 
     QString color = tokens[0];
-
+    if (activeGame == "Othello") {
+        if (tokens.size() >= 3 && tokens[1] != "Wins" && tokens[0] != "Draw") {
+            for (int k = 1; k + 1 < tokens.size(); k += 2) {
+                validMoveCells.append({tokens[k].toInt(), tokens[k+1].toInt()});
+            }
+            txtGameLog->append(color + "'s turn. Valid moves are highlighted.");
+        }
+        applyCheckersHighlights();
+        return;
+    }
     if (tokens.size() >= 2 && (tokens[1] == "selected" || tokens[1] == "continue")) {
         if (tokens.size() < 4) return;
-
-        int selR = tokens[2].toInt();
-        int selC = tokens[3].toInt();
-        selectedCell = {selR, selC};
-
+        selectedCell = {tokens[2].toInt(), tokens[3].toInt()};
         for (int k = 4; k + 1 < tokens.size(); k += 2) {
-            int dR = tokens[k].toInt();
-            int dC = tokens[k+1].toInt();
-            validMoveCells.append({dR, dC});
+            validMoveCells.append({tokens[k].toInt(), tokens[k+1].toInt()});
         }
-
         if (tokens[1] == "selected")
-            txtGameLog->append(color + " selected piece at (" + QString::number(selR) + "," + QString::number(selC) + "). Choose destination.");
+            txtGameLog->append(color + " selected piece at (" + QString::number(selectedCell.first) + "," + QString::number(selectedCell.second) + "). Choose destination.");
         else
             txtGameLog->append(color + " continues jump! Choose next jump.");
 
     } else if (tokens.size() >= 3 && tokens[1] != "Win") {
         for (int k = 1; k + 1 < tokens.size(); k += 2) {
-            int r = tokens[k].toInt();
-            int c = tokens[k+1].toInt();
-            selectablePieces.append({r, c});
+            selectablePieces.append({tokens[k].toInt(), tokens[k+1].toInt()});
         }
         txtGameLog->append(color + "'s turn. Click one of the highlighted pieces.");
     }
@@ -402,7 +402,7 @@ void Widget::clearCheckersHighlights() {
 }
 
 void Widget::applyCheckersHighlights() {
-    if (activeGame != "Checkers") return;
+    if (activeGame != "Checkers" && activeGame != "Othello") return;
     for (const auto& p : selectablePieces) {
         QLayoutItem *item = boardGrid->itemAtPosition(p.first, p.second);
         if (item && item->widget()) {
@@ -410,6 +410,7 @@ void Widget::applyCheckersHighlights() {
             item->widget()->setStyleSheet(current + " border: 3px solid #FFFFFF; border-radius: 27px;");
         }
     }
+
     if (selectedCell.first >= 0) {
         QLayoutItem *item = boardGrid->itemAtPosition(selectedCell.first, selectedCell.second);
         if (item && item->widget()) {
@@ -420,7 +421,12 @@ void Widget::applyCheckersHighlights() {
     for (const auto& d : validMoveCells) {
         QLayoutItem *item = boardGrid->itemAtPosition(d.first, d.second);
         if (item && item->widget()) {
-            QString bgColor = ((d.first + d.second) % 2 == 1) ? "#8D6E63" : "#D7CCC8";
+            QString bgColor;
+            if (activeGame == "Checkers") {
+                bgColor = ((d.first + d.second) % 2 == 1) ? "#8D6E63" : "#D7CCC8";
+            } else {
+                bgColor = "#1B5E20";
+            }
             item->widget()->setStyleSheet(
                 "background-color: qradialgradient(cx:0.5, cy:0.5, radius:0.35, fx:0.5, fy:0.5, "
                 "stop:0 #00E676, stop:0.36 #00E676, stop:0.37 " + bgColor + ", stop:1 " + bgColor + "); "
@@ -428,7 +434,6 @@ void Widget::applyCheckersHighlights() {
         }
     }
 }
-
 void Widget::onBoardCellClicked(int r, int c) {
     sendCommand("CLICK:" + QString::number(r) + ":" + QString::number(c));
 }

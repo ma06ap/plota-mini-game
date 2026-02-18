@@ -160,7 +160,7 @@ void GameServer::handleMove(QTcpSocket* senderSocket, int row, int col) {
             endGame(session, isHost ? "HOST_WON" : "GUEST_WON");
             return;
         }
-        if (res == "Draw") {
+        if (res.find("Draw") != std::string::npos) {
             endGame(session, "DRAW");
             return;
         }
