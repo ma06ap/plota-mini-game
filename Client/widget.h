@@ -15,6 +15,11 @@
 #include <QComboBox>
 #include <QList>
 #include <QPair>
+#include <QTabWidget>
+#include <QRegularExpression>
+#include <QCryptographicHash>
+#include <QDialog>
+#include <QFormLayout>
 
 class Widget : public QWidget
 {
@@ -33,6 +38,7 @@ private slots:
     void onBtnConnectClicked();
     void onBtnLoginClicked();
     void onBtnSignupClicked();
+    void onBtnForgotClicked();
     void onBtnBackToMenuClicked();
 
 private:
@@ -46,10 +52,22 @@ private:
     QLineEdit *leIp;
     QLineEdit *lePort;
     QPushButton *btnConnect;
+    QTabWidget *authTabs;
+    QWidget *tabLogin;
+    QWidget *tabSignup;
+
     QLineEdit *leUsername;
     QLineEdit *lePassword;
     QPushButton *btnLogin;
+    QPushButton *btnForgotPassword;
+
+    QLineEdit *leSignupName;
+    QLineEdit *leSignupUsername;
+    QLineEdit *leSignupPhone;
+    QLineEdit *leSignupEmail;
+    QLineEdit *leSignupPassword;
     QPushButton *btnSignup;
+
     QLabel *lblStatus;
 
     QLineEdit *leJoinId;
@@ -66,6 +84,8 @@ private:
     QTextEdit *txtGameLog;
 
     QString activeGame;
+
+    // --- Checkers / Othello selection highlight state ---
     QPair<int,int> selectedCell = {-1, -1};
     QList<QPair<int,int>> validMoveCells;
     QList<QPair<int,int>> selectablePieces;
@@ -76,6 +96,7 @@ private:
     void setupGamePage();
 
     void sendCommand(QString cmd);
+    QString hashPassword(const QString& pass);
 
     void initBoardGrid(int rows, int cols);
     void renderBoard(QString data);

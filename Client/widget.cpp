@@ -1,8 +1,6 @@
 #include "widget.h"
 #include <QMessageBox>
 #include <QDebug>
-#include <QRegularExpression>
-#include <QComboBox>
 
 Widget::Widget(QWidget *parent)
     : QWidget(parent)
@@ -19,6 +17,10 @@ Widget::Widget(QWidget *parent)
 }
 
 Widget::~Widget() {}
+
+QString Widget::hashPassword(const QString& pass) {
+    return QString(QCryptographicHash::hash(pass.toUtf8(), QCryptographicHash::Sha256).toHex());
+}
 
 void Widget::setupUI() {
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
@@ -51,12 +53,12 @@ void Widget::setupUI() {
 void Widget::setupLoginPage() {
     pageLogin = new QWidget();
     QVBoxLayout *layout = new QVBoxLayout(pageLogin);
-    layout->setSpacing(25);
-    layout->setContentsMargins(40, 50, 40, 50);
-    layout->setAlignment(Qt::AlignCenter);
+    layout->setSpacing(15);
+    layout->setContentsMargins(40, 30, 40, 30);
+    layout->setAlignment(Qt::AlignTop);
 
     QLabel *lblTitle = new QLabel("PLOTA GAME HUB");
-    lblTitle->setStyleSheet("font-size: 28pt; font-weight: bold; color: #E67E22; margin-bottom: 20px;");
+    lblTitle->setStyleSheet("font-size: 24pt; font-weight: bold; color: #E67E22; margin-bottom: 10px;");
     lblTitle->setAlignment(Qt::AlignCenter);
 
     QGroupBox *grpConn = new QGroupBox("Connection");
@@ -71,39 +73,69 @@ void Widget::setupLoginPage() {
     lConn->addWidget(lePort);
     lConn->addWidget(btnConnect);
 
-    QGroupBox *grpAuth = new QGroupBox("Login / Signup");
-    QVBoxLayout *lAuth = new QVBoxLayout(grpAuth);
+    authTabs = new QTabWidget();
+    authTabs->setStyleSheet(
+        "QTabWidget::pane { border: 1px solid #34495E; border-radius: 5px; margin-top: 10px; } "
+        "QTabBar::tab { background: #2C3E50; color: white; padding: 10px 20px; border-top-left-radius: 5px; border-top-right-radius: 5px; } "
+        "QTabBar::tab:selected { background: #2980B9; font-weight: bold; }");
+
+    tabLogin = new QWidget();
+    QVBoxLayout *lLogin = new QVBoxLayout(tabLogin);
+    lLogin->setSpacing(15);
     leUsername = new QLineEdit(); leUsername->setPlaceholderText("Username");
     lePassword = new QLineEdit(); lePassword->setPlaceholderText("Password");
     lePassword->setEchoMode(QLineEdit::Password);
 
-    QHBoxLayout *hBtns = new QHBoxLayout();
     btnLogin = new QPushButton("Login");
-    btnSignup = new QPushButton("Sign Up");
+    btnLogin->setCursor(Qt::PointingHandCursor);
     btnLogin->setStyleSheet("background-color: #2980B9; color: white;");
-    btnSignup->setStyleSheet("background-color: #2980B9; color: white;");
-
-    btnLogin->setEnabled(false);
-    btnSignup->setEnabled(false);
-    leUsername->setEnabled(false);
-    lePassword->setEnabled(false);
-
     connect(btnLogin, &QPushButton::clicked, this, &Widget::onBtnLoginClicked);
+
+    btnForgotPassword = new QPushButton("Forgot Password?");
+    btnForgotPassword->setStyleSheet("background: transparent; color: #3498DB; text-decoration: underline; border: none; font-size: 10pt;");
+    btnForgotPassword->setCursor(Qt::PointingHandCursor);
+    connect(btnForgotPassword, &QPushButton::clicked, this, &Widget::onBtnForgotClicked);
+
+    lLogin->addWidget(leUsername);
+    lLogin->addWidget(lePassword);
+    lLogin->addWidget(btnLogin);
+    lLogin->addWidget(btnForgotPassword);
+    lLogin->addStretch();
+
+    tabSignup = new QWidget();
+    QVBoxLayout *lSignup = new QVBoxLayout(tabSignup);
+    lSignup->setSpacing(10);
+    leSignupName = new QLineEdit(); leSignupName->setPlaceholderText("Full Name");
+    leSignupUsername = new QLineEdit(); leSignupUsername->setPlaceholderText("Username");
+    leSignupPhone = new QLineEdit(); leSignupPhone->setPlaceholderText("Phone (e.g. 09123456789)");
+    leSignupEmail = new QLineEdit(); leSignupEmail->setPlaceholderText("Email");
+    leSignupPassword = new QLineEdit(); leSignupPassword->setPlaceholderText("Password (Min 8 chars)");
+    leSignupPassword->setEchoMode(QLineEdit::Password);
+
+    btnSignup = new QPushButton("Sign Up");
+    btnSignup->setCursor(Qt::PointingHandCursor);
+    btnSignup->setStyleSheet("background-color: #8E44AD; color: white;");
     connect(btnSignup, &QPushButton::clicked, this, &Widget::onBtnSignupClicked);
 
-    hBtns->addWidget(btnLogin);
-    hBtns->addWidget(btnSignup);
-    lAuth->addWidget(leUsername);
-    lAuth->addWidget(lePassword);
-    lAuth->addLayout(hBtns);
+    lSignup->addWidget(leSignupName);
+    lSignup->addWidget(leSignupUsername);
+    lSignup->addWidget(leSignupPhone);
+    lSignup->addWidget(leSignupEmail);
+    lSignup->addWidget(leSignupPassword);
+    lSignup->addWidget(btnSignup);
+    lSignup->addStretch();
+
+    authTabs->addTab(tabLogin, "Login");
+    authTabs->addTab(tabSignup, "Sign Up");
+    authTabs->setEnabled(false);
 
     lblStatus = new QLabel("Not Connected");
     lblStatus->setAlignment(Qt::AlignCenter);
-    lblStatus->setStyleSheet("color: #95A5A6;");
+    lblStatus->setStyleSheet("color: #95A5A6; margin-top: 10px;");
 
     layout->addWidget(lblTitle);
     layout->addWidget(grpConn);
-    layout->addWidget(grpAuth);
+    layout->addWidget(authTabs);
     layout->addWidget(lblStatus);
 }
 
@@ -237,14 +269,11 @@ void Widget::onBtnConnectClicked() {
 }
 
 void Widget::onConnected() {
-    lblStatus->setText("Connected! Please Login.");
+    lblStatus->setText("Connected! Please Login or Sign Up.");
     lblStatus->setStyleSheet("color: #2ECC71;");
     btnConnect->setEnabled(false);
     btnConnect->setText("Connected");
-    leUsername->setEnabled(true);
-    lePassword->setEnabled(true);
-    btnLogin->setEnabled(true);
-    btnSignup->setEnabled(true);
+    authTabs->setEnabled(true);
 }
 
 void Widget::onDisconnected() {
@@ -252,6 +281,7 @@ void Widget::onDisconnected() {
     lblStatus->setStyleSheet("color: red;");
     btnConnect->setEnabled(true);
     btnConnect->setText("Connect to Server");
+    authTabs->setEnabled(false);
     stackedWidget->setCurrentIndex(0);
 }
 
@@ -260,11 +290,77 @@ void Widget::onErrorOccurred(QAbstractSocket::SocketError) {
 }
 
 void Widget::onBtnLoginClicked() {
-    sendCommand("LOGIN:" + leUsername->text() + ":" + lePassword->text());
+    if (leUsername->text().isEmpty() || lePassword->text().isEmpty()) {
+        QMessageBox::warning(this, "Error", "Username and Password cannot be empty.");
+        return;
+    }
+    QString hashedPass = hashPassword(lePassword->text());
+    sendCommand("LOGIN:" + leUsername->text() + ":" + hashedPass);
 }
 
 void Widget::onBtnSignupClicked() {
-    sendCommand("SIGNUP:" + leUsername->text() + ":" + lePassword->text());
+    QString name = leSignupName->text();
+    QString user = leSignupUsername->text();
+    QString phone = leSignupPhone->text();
+    QString email = leSignupEmail->text();
+    QString pass = leSignupPassword->text();
+
+    if (name.isEmpty() || user.isEmpty()) {
+        QMessageBox::warning(this, "Error", "Name and Username are required.");
+        return;
+    }
+
+    QRegularExpression phoneRegex("^09\\d{9}$");
+    if (!phoneRegex.match(phone).hasMatch()) {
+        QMessageBox::warning(this, "Error", "Invalid phone number. Must start with 09 and be 11 digits.");
+        return;
+    }
+
+    QRegularExpression emailRegex("^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+$");
+    if (!emailRegex.match(email).hasMatch()) {
+        QMessageBox::warning(this, "Error", "Invalid email address.");
+        return;
+    }
+
+    if (pass.length() < 8) {
+        QMessageBox::warning(this, "Error", "Password must be at least 8 characters.");
+        return;
+    }
+
+    QString hashedPass = hashPassword(pass);
+    sendCommand("SIGNUP:" + user + ":" + hashedPass + ":" + name + ":" + phone + ":" + email);
+}
+
+void Widget::onBtnForgotClicked() {
+    QDialog dialog(this);
+    dialog.setWindowTitle("Forgot Password");
+    dialog.setStyleSheet(this->styleSheet());
+    QFormLayout form(&dialog);
+
+    QLineEdit *txtUser = new QLineEdit(&dialog);
+    QLineEdit *txtPhone = new QLineEdit(&dialog);
+    QLineEdit *txtNewPass = new QLineEdit(&dialog);
+    txtNewPass->setEchoMode(QLineEdit::Password);
+
+    form.addRow("Username:", txtUser);
+    form.addRow("Phone Number:", txtPhone);
+    form.addRow("New Password (Min 8):", txtNewPass);
+
+    QPushButton *btnSubmit = new QPushButton("Reset Password", &dialog);
+    btnSubmit->setStyleSheet("background-color: #E67E22; color: white; margin-top: 10px;");
+    form.addRow(btnSubmit);
+
+    connect(btnSubmit, &QPushButton::clicked, [&]() {
+        if (txtNewPass->text().length() < 8) {
+            QMessageBox::warning(&dialog, "Error", "Password must be at least 8 characters.");
+            return;
+        }
+        QString hashedPass = hashPassword(txtNewPass->text());
+        sendCommand("RESET_PASS:" + txtUser->text() + ":" + txtPhone->text() + ":" + hashedPass);
+        dialog.accept();
+    });
+
+    dialog.exec();
 }
 
 void Widget::onBtnBackToMenuClicked() {
@@ -287,6 +383,23 @@ void Widget::onReadyRead() {
 
         if (line == "LOGIN_SUCCESS") {
             stackedWidget->setCurrentIndex(1);
+        }
+        else if (line == "LOGIN_FAIL") {
+            QMessageBox::warning(this, "Login Failed", "Invalid username or password.");
+        }
+        else if (line == "SIGNUP_SUCCESS") {
+            QMessageBox::information(this, "Success", "Account created successfully. You can now login.");
+            authTabs->setCurrentIndex(0);
+            leSignupPassword->clear();
+        }
+        else if (line == "SIGNUP_FAIL") {
+            QMessageBox::warning(this, "Signup Failed", "Username already exists or server error.");
+        }
+        else if (line == "RESET_SUCCESS") {
+            QMessageBox::information(this, "Success", "Password reset successfully. You can now login.");
+        }
+        else if (line == "RESET_FAIL") {
+            QMessageBox::warning(this, "Reset Failed", "Username and Phone number do not match.");
         }
         else if (line.startsWith("GAME_CREATED:")) {
             QString roomId = line.mid(13);
@@ -323,9 +436,10 @@ void Widget::onReadyRead() {
 
             boardContainer->setEnabled(true);
             txtGameLog->append(">>> GAME STARTED! <<<");
+
             if (activeGame == "Connect-4")      txtGameLog->append("Red (Host) starts first.");
-            else if (activeGame == "Checkers")  txtGameLog->append("Red (Host) starts first. Click a piece to select it, then click a destination.");
-            else if (activeGame == "Othello")   txtGameLog->append("Black (Host) starts first.");
+            else if (activeGame == "Checkers")  txtGameLog->append("Red (Host) starts first. Click a piece to select it.");
+            else if (activeGame == "Othello")   txtGameLog->append("Black (Host) starts first. Valid moves are highlighted.");
         }
         else if (line.startsWith("TIME:")) {
             QStringList parts = line.split(":");
@@ -343,7 +457,6 @@ void Widget::onReadyRead() {
             onBtnBackToMenuClicked();
         }
         else if (line.startsWith("BOARD:")) {
-            clearCheckersHighlights();
             renderBoard(line.mid(6));
         }
         else if (line.startsWith("STATE:")) {
@@ -364,6 +477,8 @@ void Widget::handleStateMessage(QString state) {
     if (tokens.size() < 1) return;
 
     QString color = tokens[0];
+
+    // --- Othello Logic ---
     if (activeGame == "Othello") {
         if (tokens.size() >= 3 && tokens[1] != "Wins" && tokens[0] != "Draw") {
             for (int k = 1; k + 1 < tokens.size(); k += 2) {
@@ -374,6 +489,7 @@ void Widget::handleStateMessage(QString state) {
         applyCheckersHighlights();
         return;
     }
+
     if (tokens.size() >= 2 && (tokens[1] == "selected" || tokens[1] == "continue")) {
         if (tokens.size() < 4) return;
         selectedCell = {tokens[2].toInt(), tokens[3].toInt()};
@@ -403,6 +519,7 @@ void Widget::clearCheckersHighlights() {
 
 void Widget::applyCheckersHighlights() {
     if (activeGame != "Checkers" && activeGame != "Othello") return;
+
     for (const auto& p : selectablePieces) {
         QLayoutItem *item = boardGrid->itemAtPosition(p.first, p.second);
         if (item && item->widget()) {
@@ -418,6 +535,7 @@ void Widget::applyCheckersHighlights() {
             item->widget()->setStyleSheet(current + " border: 4px solid #FFD700; border-radius: 27px;");
         }
     }
+
     for (const auto& d : validMoveCells) {
         QLayoutItem *item = boardGrid->itemAtPosition(d.first, d.second);
         if (item && item->widget()) {
@@ -434,6 +552,7 @@ void Widget::applyCheckersHighlights() {
         }
     }
 }
+
 void Widget::onBoardCellClicked(int r, int c) {
     sendCommand("CLICK:" + QString::number(r) + ":" + QString::number(c));
 }
@@ -479,6 +598,7 @@ void Widget::renderBoard(QString data) {
     if (activeGame == "Connect-4") { rows = 6; cols = 7; }
 
     if (boardGrid->count() == 0) initBoardGrid(rows, cols);
+
     for (int i = 0; i < rows; ++i) {
         for (int j = 0; j < cols; ++j) {
             QLayoutItem *item = boardGrid->itemAtPosition(i, j);
@@ -527,6 +647,7 @@ void Widget::renderBoard(QString data) {
             }
         }
     }
+
     applyCheckersHighlights();
 }
 

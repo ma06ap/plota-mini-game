@@ -12,7 +12,8 @@ class AuthHandler {
 public:
     AuthHandler(QString filename);
     bool login(QString username, QString password);
-    bool signup(QString username, QString password);
+    bool signup(QString username, QString password, QString name, QString phone, QString email);
+    bool resetPassword(QString username, QString phone, QString newPassword);
 
 private:
     QString m_filename;

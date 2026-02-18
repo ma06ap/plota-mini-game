@@ -57,9 +57,25 @@ void GameServer::onReadyRead() {
         }
         else if (line.startsWith("SIGNUP:")) {
             QStringList parts = line.split(":");
-            if(parts.size() >= 3) {
-                if(auth->signup(parts[1], parts[2])) sendToClient(clientSocket, "SIGNUP_SUCCESS");
-                else sendToClient(clientSocket, "SIGNUP_FAIL");
+            if(parts.size() >= 6) {
+                if(auth->signup(parts[1], parts[2], parts[3], parts[4], parts[5]))
+                    sendToClient(clientSocket, "SIGNUP_SUCCESS");
+                else
+                    sendToClient(clientSocket, "SIGNUP_FAIL");
+            } else {
+                sendToClient(clientSocket, "SIGNUP_FAIL");
+            }
+        }
+        else if (line.startsWith("RESET_PASS:")) {
+            QStringList parts = line.split(":");
+            if(parts.size() >= 4) {
+                if(auth->resetPassword(parts[1], parts[2], parts[3])) {
+                    sendToClient(clientSocket, "RESET_SUCCESS");
+                    emit logMessage("Password reset successful for user: " + parts[1]);
+                } else {
+                    sendToClient(clientSocket, "RESET_FAIL");
+                    emit logMessage("Password reset failed for user: " + parts[1]);
+                }
             }
         }
         else if (line.startsWith("CREATE_GAME:")) {
@@ -140,6 +156,7 @@ void GameServer::handleMove(QTcpSocket* senderSocket, int row, int col) {
 
     bool isHost = (senderSocket == session->host);
     std::string currentTurn = session->gameLogic->getCurrentPlayer();
+
     bool isHostTurn = false;
     if (session->gameType == "Connect-4")  isHostTurn = (currentTurn == "Red");
     else if (session->gameType == "Checkers")  isHostTurn = (currentTurn == "Red");
@@ -151,11 +168,14 @@ void GameServer::handleMove(QTcpSocket* senderSocket, int row, int col) {
     try {
         std::string res = session->gameLogic->input(
             "select " + std::to_string(row) + " " + std::to_string(col));
+
         QString board = QString::fromStdString(session->gameLogic->input("getboard"));
         broadcastToSession(session, "BOARD:" + board);
+
         if (!res.empty() && res != "Invalid Command" && res != "Invalid command") {
             broadcastToSession(session, "STATE:" + QString::fromStdString(res));
         }
+
         if (res.find("Win") != std::string::npos) {
             endGame(session, isHost ? "HOST_WON" : "GUEST_WON");
             return;
