@@ -11,10 +11,9 @@
 class Othello : public Game {
 private:
     Turn turn;
-    bool checkUp(Location &l, bool left, bool right) const;
-    bool checkDown(Location &l, bool left, bool right) const;
-    bool checkLeft(Location &l, bool up, bool down) const;
-    bool checkRight(Location &l, bool up, bool down) const;
+    bool checkDirection(Location &l, int dr, int dc) const;
+    bool checkArround(Location &l) const;
+    void flipDirection(int r, int c, int dr, int dc);
 
 public:
     Othello();
@@ -23,7 +22,6 @@ public:
     std::string getCurrentPlayer() const override;
     void printBoard() const override;
 
-    bool checkArround(Location &l) const;
     void addPiece(Location &l);
     void nextTurn();
     std::string getWinner() const;

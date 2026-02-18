@@ -1,172 +1,94 @@
 #include "Othello.h"
 #include <iostream>
 
-
-bool Othello::checkUp(Location &l, bool left, bool right) const {
-
-    int i = l.getI();
-    int j = l.getJ();
-    i--;
-    if (src.getPiece(i, j) != nullptr) {
-        return true;
-    }
-    if (right && src.getPiece(i, j + 1) != nullptr) {
-        return true;
-    }
-    if (left && src.getPiece(i, j - 1) != nullptr) {
-        return true;
-    }
-    return false;
-}
-
-bool Othello::checkDown(Location &l, bool left, bool right) const {
-    int i = l.getI();
-    int j = l.getJ();
-    i++;
-    if (src.getPiece(i, j) != nullptr) {
-        return true;
-    }
-    if (right && src.getPiece(i, j + 1) != nullptr) {
-        return true;
-    }
-    if (left && src.getPiece(i, j - 1) != nullptr) {
-        return true;
-    }
-    return false;
-}
-
-bool Othello::checkLeft(Location &l, bool up, bool down) const {
-    int i = l.getI();
-    int j = l.getJ();
-    j--;
-    if (src.getPiece(i, j) != nullptr) {
-        return true;
-    }
-    if (up && src.getPiece(i - 1, j) != nullptr) {
-        return true;
-    }
-    if (down && src.getPiece(i + 1, j) != nullptr) {
-        return true;
-    }
-    return false;
-}
-
-bool Othello::checkRight(Location &l, bool up, bool down) const {
-    int i = l.getI();
-    int j = l.getJ();
-    j++;
-    if (src.getPiece(i, j) != nullptr) {
-        return true;
-    }
-    if (up && src.getPiece(i - 1, j) != nullptr) {
-        return true;
-    }
-    if (down && src.getPiece(i + 1, j) != nullptr) {
-        return true;
-    }
-    return false;
-}
-
-Othello::Othello() : Game(), turn("Black","White") {
+Othello::Othello() : Game(), turn("Black", "White") {
     src = Board(8, 8);
-    auto tmp1 = new Piece(turn.get());
-    auto tmp2 = new Piece(turn.get());
-    src.Add(tmp1, 3, 3);
-    src.Add(tmp2, 4, 4);
-    tmp1 = new Piece(turn.getOther());
-    tmp2 = new Piece(turn.getOther());
-    src.Add(tmp1, 3, 4);
-    src.Add(tmp2, 4, 3);
+    // چیدمان اولیه استاندارد اتلو
+    // 3,3 و 4,4 سفید --- 3,4 و 4,3 سیاه
+    src.Add(new Piece("White"), 3, 3);
+    src.Add(new Piece("Black"), 3, 4);
+    src.Add(new Piece("Black"), 4, 3);
+    src.Add(new Piece("White"), 4, 4);
+}
+
+std::string Othello::getName() const { return "Othello"; }
+std::string Othello::getCurrentPlayer() const { return turn.get(); }
+void Othello::printBoard() const {}
+
+// بررسی جهت خاص برای اعتبار سنجی حرکت
+bool Othello::checkDirection(Location &l, int dr, int dc) const {
+    int r = l.getI() + dr;
+    int c = l.getJ() + dc;
+    std::string myColor = turn.get();
+    std::string oppColor = (myColor == "Black") ? "White" : "Black";
+
+    // 1. قدم اول: باید حتماً مهره حریف باشد
+    if (r < 0 || r >= 8 || c < 0 || c >= 8) return false;
+    Piece* p = src.getPiece(r, c);
+
+    // اگر خالی است یا مهره خودمان است -> حرکت نامعتبر (چون ساندویچی شکل نمی‌گیرد)
+    if (!p || p->getColor() != oppColor) return false;
+
+    // 2. قدم‌های بعدی: باید به مهره خودمان برسیم
+    while (true) {
+        r += dr;
+        c += dc;
+
+        // اگر به بیرون رسیدیم
+        if (r < 0 || r >= 8 || c < 0 || c >= 8) return false;
+
+        p = src.getPiece(r, c);
+
+        // اگر به جای خالی رسیدیم -> نامعتبر
+        if (!p) return false;
+
+        // اگر به مهره خودمان رسیدیم -> معتبر (محاصره کامل شد)
+        if (p->getColor() == myColor) return true;
+
+        // اگر هنوز مهره حریف است -> ادامه بده
+    }
 }
 
 bool Othello::checkArround(Location &l) const {
-    int i = l.getI();
-    int j = l.getJ();
-    if (src.getPiece(i, j) != nullptr) {
-        return false;
+    // بررسی تمام 8 جهت
+    int dirs[8][2] = {{-1,0}, {1,0}, {0,-1}, {0,1}, {-1,-1}, {-1,1}, {1,-1}, {1,1}};
+    for(auto d : dirs) {
+        if (checkDirection(l, d[0], d[1])) return true;
     }
-    bool up=true;
-    bool down=true;
-    bool left=true;
-    bool right=true;
-    if (i == 0) {
-        up = false;
-    }
-    if (i == 7) {
-        down = false;
-    }
-    if (j == 0) {
-        right = false;
-    }
-    if (j == 7) {
-        left = false;
-    }
+    return false;
+}
 
-    // *** اصلاح شده ***
-    bool result[4] = {false};
+void Othello::flipDirection(int r, int c, int dr, int dc) {
+    Location l(r, c);
+    // فقط در صورتی تغییر رنگ می‌دهیم که آن جهت معتبر باشد
+    if (!checkDirection(l, dr, dc)) return;
 
-    if (up) {
-        result[0] = checkUp(l, left, right);
+    int currR = r + dr;
+    int currC = c + dc;
+    std::string myColor = turn.get();
+
+    while (true) {
+        Piece* p = src.getPiece(currR, currC);
+        // اگر به مهره خودمان رسیدیم، پایان عملیات
+        if (!p || p->getColor() == myColor) break;
+
+        // تغییر رنگ مهره حریف
+        src.Delete(currR, currC);
+        src.Add(new Piece(myColor), currR, currC);
+
+        currR += dr;
+        currC += dc;
     }
-    if (down) {
-        result[1] = checkDown(l, left, right);
-    }
-    if (left) {
-        result[2] = checkLeft(l, up, down);
-    }
-    if (right) {
-        result[3] = checkRight(l, up, down);
-    }
-    return (result[0] || result[1] || result[2] || result[3]);
 }
 
 void Othello::addPiece(Location &l) {
-    auto tmp = new Piece(turn.get());
-    src.Add(tmp, l.getI(), l.getJ());
-    int i = l.getI();
-    int j = l.getJ();
-    std::string opponentColor = turn.getOther();
+    // گذاشتن مهره جدید
+    src.Add(new Piece(turn.get()), l.getI(), l.getJ());
 
-
-    int directions[8][2] = {
-        {-1, 0},  // up
-        {1, 0},   // down
-        {0, -1},  // left
-        {0, 1},   // right
-        {-1, -1}, // up-left
-        {-1, 1},  // up-right
-        {1, -1},  // down-left
-        {1, 1}    // down-right
-    };
-
-    for (int dir = 0; dir < 8; ++dir) {
-        int di = directions[dir][0];
-        int dj = directions[dir][1];
-
-        int x = i + di;
-        int y = j + dj;
-
-        std::vector<Location> piecesToFlip;
-        while (x >= 0 && x < src.getRows() && y >= 0 && y < src.getColumns()) {
-            Piece* piece = src.getPiece(x, y);
-
-            if (piece == nullptr) {
-                break;
-            }
-
-            if (piece->getColor() == opponentColor) {
-                piecesToFlip.push_back(Location(x, y));
-                x += di;
-                y += dj;
-            } else if (piece->getColor() == turn.get()) {
-                for (const auto& loc : piecesToFlip) {
-                    src.getPiece(loc.getI(), loc.getJ())->setColor(turn.get());
-                }
-                break;
-            } else {
-                break;
-            }
-        }
+    // اعمال تغییر رنگ در تمام جهات معتبر
+    int dirs[8][2] = {{-1,0}, {1,0}, {0,-1}, {0,1}, {-1,-1}, {-1,1}, {1,-1}, {1,1}};
+    for(auto d : dirs) {
+        flipDirection(l.getI(), l.getJ(), d[0], d[1]);
     }
 }
 
@@ -175,179 +97,89 @@ void Othello::nextTurn() {
 }
 
 std::string Othello::getWinner() const {
-    int b = 0;
-    int w = 0;
-    for (int i = 0; i < src.getRows(); ++i) {
-        for (int j = 0; j < src.getColumns(); ++j) {
-            Piece* piece = src.getPiece(i, j);
-            if (piece != nullptr) {
-                if (piece->getColor() == "Black") {
-                    b++;
-                } else {
-                    w++;
-                }
+    int black = 0, white = 0;
+    for (int i = 0; i < 8; ++i) {
+        for (int j = 0; j < 8; ++j) {
+            Piece* p = src.getPiece(i, j);
+            if (p) {
+                if (p->getColor() == "Black") black++;
+                else white++;
             }
         }
     }
-    if (b == w) {
-        return "Draw";
-    } else if (b > w) {
-        return ("Black " + std::to_string(b) + " " + std::to_string(w));
-    } else {
-        return ("White " + std::to_string(w) + " " + std::to_string(b));
-    }
+    if (black > white) return "Black Wins (" + std::to_string(black) + "-" + std::to_string(white) + ")";
+    if (white > black) return "White Wins (" + std::to_string(white) + "-" + std::to_string(black) + ")";
+    return "Draw (" + std::to_string(black) + "-" + std::to_string(white) + ")";
 }
 
 std::vector<Location> Othello::allowed() {
-    std::vector<Location> result;
-    std::string currentColor = turn.get();
-    std::string opponentColor = turn.getOther();
-
-    for (int row = 0; row < src.getRows(); ++row) {
-        for (int col = 0; col < src.getColumns(); ++col) {
-
-            if (src.getPiece(row, col) != nullptr) {
-                continue;
-            }
-
-            bool isValid = false;
-
-
-            int directions[8][2] = {
-                {-1, 0},  // up
-                {1, 0},   // down
-                {0, -1},  // left
-                {0, 1},   // right
-                {-1, -1}, // up-left
-                {-1, 1},  // up-right
-                {1, -1},  // down-left
-                {1, 1}    // down-right
-            };
-
-            for (int dir = 0; dir < 8; ++dir) {
-                int di = directions[dir][0];
-                int dj = directions[dir][1];
-
-                int i = row + di;
-                int j = col + dj;
-
-                bool foundOpponent = false;
-
-
-                while (i >= 0 && i < src.getRows() && j >= 0 && j < src.getColumns()) {
-                    Piece* piece = src.getPiece(i, j);
-
-                    if (piece == nullptr) {
-                        break;
-                    }
-
-                    if (piece->getColor() == opponentColor) {
-
-                        foundOpponent = true;
-                        i += di;
-                        j += dj;
-                    } else if (piece->getColor() == currentColor) {
-
-                        if (foundOpponent) {
-                            isValid = true;
-                        }
-                        break;
-                    } else {
-                        break;
-                    }
+    std::vector<Location> moves;
+    for (int i = 0; i < 8; ++i) {
+        for (int j = 0; j < 8; ++j) {
+            // فقط خانه‌های خالی را چک کن
+            if (src.getPiece(i, j) == nullptr) {
+                Location l(i, j);
+                if (checkArround(l)) {
+                    moves.push_back(l);
                 }
-
-                if (isValid) {
-                    break;
-                }
-            }
-
-            if (isValid) {
-                result.push_back(Location(row, col));
             }
         }
     }
-
-    return result;
+    return moves;
 }
 
-std::string Othello::getName() const {
-    return "Othello";
-}
-
-void Othello::printBoard() const {
-    std::cout << "\n  ";
-    for (int j = 0; j < src.getColumns(); ++j) {
-        std::cout << j << " ";
-    }
-    std::cout << "\n";
-
-    for (int i = 0; i < src.getRows(); ++i) {
-        std::cout << i << " ";
-        for (int j = 0; j < src.getColumns(); ++j) {
-            Piece* piece = src.getPiece(i, j);
-            if (piece == nullptr) {
-                std::cout << ". ";
-            } else if (piece->getColor() == "Black") {
-                std::cout << "B ";
-            } else {
-                std::cout << "W ";
-            }
-        }
-        std::cout << "\n";
-    }
-    std::cout << "\n";
-}
-
-std::string Othello::getCurrentPlayer() const {
-    return turn.get();
-}
 std::string Othello::input(std::string prompt) {
     if (prompt == "start") {
-        auto tmp = this->allowed();
+        auto moves = allowed();
         std::string result = turn.get() + " ";
-        for (auto &loc : tmp) {
-            result += std::to_string(loc.getI()) + " " + std::to_string(loc.getJ()) + " ";
-        }
+        for (const auto& m : moves) result += std::to_string(m.getI()) + " " + std::to_string(m.getJ()) + " ";
         return result;
     }
+
     if (prompt == "getboard") {
         std::string result;
-        for (int i = 0; i < src.getRows(); ++i) {
-            for (int j = 0; j < src.getColumns(); ++j) {
-                Piece* piece = src.getPiece(i, j);
-                if (piece != nullptr) {
-                    result += std::to_string(i) + " " + std::to_string(j) + " ";
-                    result += piece->getColor() + " ";
-                }
+        for (int i = 0; i < 8; ++i) {
+            for (int j = 0; j < 8; ++j) {
+                Piece* p = src.getPiece(i, j);
+                if (p) result += std::to_string(i) + " " + std::to_string(j) + " " + p->getColor() + " ";
             }
         }
         return result;
     }
 
-    // *** اصلاح شده: خواندن صحیح فرمت "select r c" ***
-    // s e l e c t   r   c
-    // 0 1 2 3 4 5 6 7 8 9
-    char ii = prompt[7]; // سطر
-    char jj = prompt[9]; // ستون
+    // ورودی: select r c
+    if (prompt.size() < 10) return "Invalid Command";
+    char ii = prompt[7];
+    char jj = prompt[9];
     int i = ii - '0';
     int j = jj - '0';
-
     Location l(i, j);
-    this->addPiece(l);
-    this->nextTurn();
 
-    auto tmp = this->allowed();
-    if (tmp.empty()) {
-        this->nextTurn();
-        tmp = this->allowed();
-        if (tmp.empty()) {
+    // 1. بررسی اعتبار حرکت
+    bool isValid = false;
+    auto validMoves = allowed();
+    for(const auto& vm : validMoves) {
+        if(vm.getI() == i && vm.getJ() == j) { isValid = true; break; }
+    }
+    if (!isValid) return "Invalid Move";
+
+    // 2. انجام حرکت
+    addPiece(l);
+    nextTurn();
+
+    // 3. بررسی ادامه بازی
+    auto nextMoves = allowed();
+    if (nextMoves.empty()) {
+        // نوبت حریف رد می‌شود (Pass)
+        nextTurn();
+        nextMoves = allowed();
+        if (nextMoves.empty()) {
+            // هر دو حرکت ندارند -> پایان بازی
             return getWinner();
         }
     }
-    std::string result;
-    for (auto &loc : tmp) {
-        result += std::to_string(loc.getI()) +" " + std::to_string(loc.getJ()) + " ";
-    }
-    return (turn.get() + " " + result);
+
+    std::string result = turn.get() + " ";
+    for (const auto& m : nextMoves) result += std::to_string(m.getI()) + " " + std::to_string(m.getJ()) + " ";
+    return result;
 }
