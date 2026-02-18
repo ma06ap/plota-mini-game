@@ -268,13 +268,13 @@ void Widget::onBtnSignupClicked() {
 }
 
 void Widget::onBtnBackToMenuClicked() {
-
     sendCommand("LEAVE_GAME");
 
     stackedWidget->setCurrentIndex(1);
     txtGameLog->clear();
     activeGame = "";
     clearLayout(boardGrid);
+    clearCheckersHighlights();
 
     lblRoomId->setText("Room: ----");
     lblHostTime->setText("Host: 03:00");
@@ -323,10 +323,9 @@ void Widget::onReadyRead() {
 
             boardContainer->setEnabled(true);
             txtGameLog->append(">>> GAME STARTED! <<<");
-
-            if (activeGame == "Connect-4") txtGameLog->append("Red (Host) starts first.");
-            else if (activeGame == "Checkers") txtGameLog->append("White (Host) starts first.");
-            else if (activeGame == "Othello") txtGameLog->append("Black (Host) starts first.");
+            if (activeGame == "Connect-4")      txtGameLog->append("Red (Host) starts first.");
+            else if (activeGame == "Checkers")  txtGameLog->append("Red (Host) starts first. Click a piece to select it, then click a destination.");
+            else if (activeGame == "Othello")   txtGameLog->append("Black (Host) starts first.");
         }
         else if (line.startsWith("TIME:")) {
             QStringList parts = line.split(":");
@@ -339,14 +338,93 @@ void Widget::onReadyRead() {
         }
         else if (line.startsWith("GAME_OVER:")) {
             QString reason = line.mid(10);
+            clearCheckersHighlights();
             QMessageBox::information(this, "Game Over", "Result: " + reason);
             onBtnBackToMenuClicked();
         }
         else if (line.startsWith("BOARD:")) {
+            clearCheckersHighlights();
             renderBoard(line.mid(6));
+        }
+        else if (line.startsWith("STATE:")) {
+            handleStateMessage(line.mid(6));
         }
         else if (line.startsWith("JOIN_FAIL:")) {
             QMessageBox::warning(this, "Join Failed", line.mid(10));
+        }
+    }
+}
+
+void Widget::handleStateMessage(QString state) {
+    if (activeGame != "Checkers") return;
+
+    clearCheckersHighlights();
+
+    QStringList tokens = state.split(' ', Qt::SkipEmptyParts);
+    if (tokens.size() < 1) return;
+
+    QString color = tokens[0];
+
+    if (tokens.size() >= 2 && (tokens[1] == "selected" || tokens[1] == "continue")) {
+        if (tokens.size() < 4) return;
+
+        int selR = tokens[2].toInt();
+        int selC = tokens[3].toInt();
+        selectedCell = {selR, selC};
+
+        for (int k = 4; k + 1 < tokens.size(); k += 2) {
+            int dR = tokens[k].toInt();
+            int dC = tokens[k+1].toInt();
+            validMoveCells.append({dR, dC});
+        }
+
+        if (tokens[1] == "selected")
+            txtGameLog->append(color + " selected piece at (" + QString::number(selR) + "," + QString::number(selC) + "). Choose destination.");
+        else
+            txtGameLog->append(color + " continues jump! Choose next jump.");
+
+    } else if (tokens.size() >= 3 && tokens[1] != "Win") {
+        for (int k = 1; k + 1 < tokens.size(); k += 2) {
+            int r = tokens[k].toInt();
+            int c = tokens[k+1].toInt();
+            selectablePieces.append({r, c});
+        }
+        txtGameLog->append(color + "'s turn. Click one of the highlighted pieces.");
+    }
+
+    applyCheckersHighlights();
+}
+
+void Widget::clearCheckersHighlights() {
+    selectedCell = {-1, -1};
+    validMoveCells.clear();
+    selectablePieces.clear();
+}
+
+void Widget::applyCheckersHighlights() {
+    if (activeGame != "Checkers") return;
+    for (const auto& p : selectablePieces) {
+        QLayoutItem *item = boardGrid->itemAtPosition(p.first, p.second);
+        if (item && item->widget()) {
+            QString current = item->widget()->styleSheet();
+            item->widget()->setStyleSheet(current + " border: 3px solid #FFFFFF; border-radius: 27px;");
+        }
+    }
+    if (selectedCell.first >= 0) {
+        QLayoutItem *item = boardGrid->itemAtPosition(selectedCell.first, selectedCell.second);
+        if (item && item->widget()) {
+            QString current = item->widget()->styleSheet();
+            item->widget()->setStyleSheet(current + " border: 4px solid #FFD700; border-radius: 27px;");
+        }
+    }
+    for (const auto& d : validMoveCells) {
+        QLayoutItem *item = boardGrid->itemAtPosition(d.first, d.second);
+        if (item && item->widget()) {
+            QString bgColor = ((d.first + d.second) % 2 == 1) ? "#8D6E63" : "#D7CCC8";
+            item->widget()->setStyleSheet(
+                "background-color: qradialgradient(cx:0.5, cy:0.5, radius:0.35, fx:0.5, fy:0.5, "
+                "stop:0 #00E676, stop:0.36 #00E676, stop:0.37 " + bgColor + ", stop:1 " + bgColor + "); "
+                                                    "border: 2px solid #00C853; border-radius: 0;");
         }
     }
 }
@@ -367,10 +445,11 @@ void Widget::clearLayout(QLayout *layout) {
 
 void Widget::initBoardGrid(int rows, int cols) {
     clearLayout(boardGrid);
+    clearCheckersHighlights();
 
     QString style = "border-radius: 8px; border: 4px solid #1a252f; ";
-    if (activeGame == "Checkers") style += "background-color: #5D4037;";
-    else if (activeGame == "Othello") style += "background-color: #1B5E20;";
+    if (activeGame == "Checkers")       style += "background-color: #5D4037;";
+    else if (activeGame == "Othello")   style += "background-color: #1B5E20;";
     else if (activeGame == "Connect-4") style += "background-color: #0D47A1; padding: 10px;";
 
     boardContainer->setStyleSheet(style);
@@ -380,15 +459,7 @@ void Widget::initBoardGrid(int rows, int cols) {
             QPushButton *btn = new QPushButton();
             btn->setFixedSize(55, 55);
             btn->setCursor(Qt::PointingHandCursor);
-
-            if (activeGame == "Checkers") {
-                if ((i + j) % 2 == 1)
-                    btn->setStyleSheet("background-color: #8D6E63; border: none; border-radius: 0;");
-                else
-                    btn->setStyleSheet("background-color: #D7CCC8; border: none; border-radius: 0;");
-            } else {
-                btn->setStyleSheet("background-color: rgba(0,0,0,0.2); border-radius: 27px; border: 1px solid rgba(255,255,255,0.1);");
-            }
+            btn->setStyleSheet(getEmptyCellStyle(i, j));
 
             connect(btn, &QPushButton::clicked, [this, i, j](){
                 onBoardCellClicked(i, j);
@@ -401,30 +472,49 @@ void Widget::initBoardGrid(int rows, int cols) {
 void Widget::renderBoard(QString data) {
     int rows = 8, cols = 8;
     if (activeGame == "Connect-4") { rows = 6; cols = 7; }
+
     if (boardGrid->count() == 0) initBoardGrid(rows, cols);
+    for (int i = 0; i < rows; ++i) {
+        for (int j = 0; j < cols; ++j) {
+            QLayoutItem *item = boardGrid->itemAtPosition(i, j);
+            if (item && item->widget()) {
+                item->widget()->setStyleSheet(getEmptyCellStyle(i, j));
+            }
+        }
+    }
 
     QStringList tokens = data.split(' ', Qt::SkipEmptyParts);
+    if (tokens.isEmpty()) {
+        applyCheckersHighlights();
+        return;
+    }
+
+    QStringList cleanTokens;
+    for(const QString &t : tokens) {
+        if(!t.trimmed().isEmpty()) cleanTokens.append(t);
+    }
 
     if (activeGame == "Checkers") {
-        for (int k = 0; k < tokens.size(); k += 4) {
-            if (k + 3 >= tokens.size()) break;
-            int r = tokens[k].toInt();
-            int c = tokens[k+1].toInt();
-            QString color = tokens[k+2];
-            QString role = tokens[k+3];
+        for (int k = 0; k + 3 < cleanTokens.size(); k += 4) {
+            bool ok1, ok2;
+            int r = cleanTokens[k].toInt(&ok1);
+            int c = cleanTokens[k+1].toInt(&ok2);
+            QString color = cleanTokens[k+2];
+            QString role  = cleanTokens[k+3];
 
-            QLayoutItem *item = boardGrid->itemAtPosition(r, c);
-            if (item && item->widget()) {
-                item->widget()->setStyleSheet(getCellStyle(color, role));
+            if (ok1 && ok2) {
+                QLayoutItem *item = boardGrid->itemAtPosition(r, c);
+                if (item && item->widget()) {
+                    item->widget()->setStyleSheet(getCellStyle(color, role));
+                }
             }
         }
     }
     else {
-        for (int k = 0; k < tokens.size(); k += 3) {
-            if (k + 2 >= tokens.size()) break;
-            int r = tokens[k].toInt();
-            int c = tokens[k+1].toInt();
-            QString color = tokens[k+2];
+        for (int k = 0; k + 2 < cleanTokens.size(); k += 3) {
+            int r = cleanTokens[k].toInt();
+            int c = cleanTokens[k+1].toInt();
+            QString color = cleanTokens[k+2];
 
             QLayoutItem *item = boardGrid->itemAtPosition(r, c);
             if (item && item->widget()) {
@@ -432,21 +522,32 @@ void Widget::renderBoard(QString data) {
             }
         }
     }
+    applyCheckersHighlights();
+}
+
+QString Widget::getEmptyCellStyle(int r, int c) {
+    if (activeGame == "Checkers") {
+        if ((r + c) % 2 == 1)
+            return "background-color: #8D6E63; border: none; border-radius: 0;";
+        else
+            return "background-color: #D7CCC8; border: none; border-radius: 0;";
+    }
+    return "background-color: rgba(0,0,0,0.2); border-radius: 27px; border: 1px solid rgba(255,255,255,0.1);";
 }
 
 QString Widget::getCellStyle(QString color, QString role) {
     QString style = "border-radius: 27px; border: 1px solid rgba(0,0,0,0.5); ";
     QString grad;
 
-    if (color == "Red") grad = "qradialgradient(cx:0.4, cy:0.4, radius:0.6, fx:0.4, fy:0.4, stop:0 #FF5252, stop:1 #B71C1C)";
+    if (color == "Red")         grad = "qradialgradient(cx:0.4, cy:0.4, radius:0.6, fx:0.4, fy:0.4, stop:0 #FF5252, stop:1 #B71C1C)";
     else if (color == "Yellow") grad = "qradialgradient(cx:0.4, cy:0.4, radius:0.6, fx:0.4, fy:0.4, stop:0 #FFEB3B, stop:1 #F9A825)";
-    else if (color == "Black") grad = "qradialgradient(cx:0.4, cy:0.4, radius:0.6, fx:0.4, fy:0.4, stop:0 #444, stop:1 #000)";
-    else if (color == "White") grad = "qradialgradient(cx:0.4, cy:0.4, radius:0.6, fx:0.4, fy:0.4, stop:0 #FFF, stop:1 #CCC)";
+    else if (color == "Black")  grad = "qradialgradient(cx:0.4, cy:0.4, radius:0.6, fx:0.4, fy:0.4, stop:0 #444, stop:1 #000)";
+    else if (color == "White")  grad = "qradialgradient(cx:0.4, cy:0.4, radius:0.6, fx:0.4, fy:0.4, stop:0 #FFF, stop:1 #CCC)";
     else grad = "transparent";
 
     style += "background-color: " + grad + ";";
 
-    if (role == "King") style += "border: 4px solid #FFD700;";
+    if (role == "King") style += " border: 4px solid #FFD700;";
 
     return style;
 }

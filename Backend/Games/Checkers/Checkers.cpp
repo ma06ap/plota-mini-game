@@ -1,246 +1,310 @@
 #include "Checkers.h"
 #include <iostream>
+#include <sstream>
 
-Checkers::Checkers() : Game(), turn("White","Black"), pieceSelected(false), mustContinueJump(false) {
+Checkers::Checkers()
+    : Game(),
+    turn("Red", "Black"),
+    pieceSelected(false), selRow(-1), selCol(-1),
+    inChainCapture(false), chainRow(-1), chainCol(-1)
+{
     src = Board(8, 8);
-    for (int i = 0; i < 3; ++i) {
-        for (int j = 0; j < src.getColumns(); ++j) {
-            if ((i + j) % 2 == 1) src.Add(new Piece(turn.get()), i, j);
-        }
-    }
-    for (int i = 5; i < src.getRows(); ++i) {
-        for (int j = 0; j < src.getColumns(); ++j) {
-            if ((i + j) % 2 == 1) src.Add(new Piece(turn.getOther()), i, j);
-        }
-    }
-}
 
-std::string Checkers::getName() const { return "Checkers"; }
+    for (int r = 0; r < 3; ++r)
+        for (int c = 0; c < 8; ++c)
+            if ((r + c) % 2 == 1)
+                src.Add(new Piece("Black", "default"), r, c);
+
+    for (int r = 5; r < 8; ++r)
+        for (int c = 0; c < 8; ++c)
+            if ((r + c) % 2 == 1)
+                src.Add(new Piece("Red", "default"), r, c);
+}
+std::string Checkers::getName()          const { return "Checkers"; }
 std::string Checkers::getCurrentPlayer() const { return turn.get(); }
-
-std::string Checkers::input(std::string prompt) {
-    if (prompt == "start") {
-        auto pieces = allowedPieces();
-        if (pieces.empty()) return getWinner();
-        std::string result = turn.get() + " ";
-        for (const auto& loc : pieces) result += std::to_string(loc.getI()) + " " + std::to_string(loc.getJ()) + " ";
-        return result;
-    }
-
-    if (prompt.substr(0, 6) == "select") {
-        char ii = prompt[7];
-        char jj = prompt[9];
-        int i = ii - '0';
-        int j = jj - '0';
-        Location loc(i, j);
-        if (pieceSelected) {
-            auto moves = allowedMoves();
-            bool isMove = false;
-            for (const auto& moveLoc : moves) {
-                if (moveLoc.getI() == i && moveLoc.getJ() == j) {
-                    isMove = true;
-                    break;
-                }
-            }
-
-            if (isMove) {
-                move(loc);
-                if (isPieceSelected()) {
-                    auto nextMoves = allowedMoves();
-                    if (nextMoves.empty()) {
-                        nextTurn();
-                    } else {
-                        std::string result = turn.get() + " continue ";
-                        for (const auto& m : nextMoves) result += std::to_string(m.getI()) + " " + std::to_string(m.getJ()) + " ";
-                        return result;
-                    }
-                } else {
-                    nextTurn();
-                    auto pieces = allowedPieces();
-                    if (pieces.empty()) return getWinner();
-
-                    std::string result = turn.get() + " ";
-                    for (const auto& l : pieces) result += std::to_string(l.getI()) + " " + std::to_string(l.getJ()) + " ";
-                    return result;
-                }
-            }
+void        Checkers::printBoard()       const {
+    for (int r = 0; r < 8; ++r) {
+        for (int c = 0; c < 8; ++c) {
+            Piece* p = src.getPiece(r, c);
+            if (!p)                          std::cout << ". ";
+            else if (p->getColor() == "Red") std::cout << (isKing(p) ? "RK" : "R ");
+            else                             std::cout << (isKing(p) ? "BK" : "B ");
         }
-
-        selectPiece(loc);
-        auto moves = allowedMoves();
-        if (moves.empty()) return "No moves available";
-
-        std::string result = turn.get() + " selected ";
-        for (const auto& move : moves) result += std::to_string(move.getI()) + " " + std::to_string(move.getJ()) + " ";
-        return result;
+        std::cout << "\n";
     }
-
-    if (prompt == "getboard") return getBoard();
-    return "Invalid command";
 }
 
-std::string Checkers::getBoard() const {
-    std::string result;
-    for (int i = 0; i < src.getRows(); ++i) {
-        for (int j = 0; j < src.getColumns(); ++j) {
-            Piece* piece = src.getPiece(i, j);
-            if (piece != nullptr) {
-                result += std::to_string(i) + " " + std::to_string(j) + " " + piece->getColor() + " " + piece->getRole() + " ";
+bool Checkers::isKing(Piece* p) const {
+    return p && p->getRole() == "king";
+}
+
+bool Checkers::sameTeam(Piece* a, Piece* b) const {
+    if (!a || !b) return false;
+    return a->getColor() == b->getColor();
+}
+
+std::vector<Checkers::Move> Checkers::getCaptures(int r, int c) const {
+    std::vector<Move> caps;
+    Piece* p = src.getPiece(r, c);
+    if (!p) return caps;
+    std::vector<std::pair<int,int>> dirs;
+    if (p->getColor() == "Red"   || isKing(p)) { dirs.push_back({-1,-1}); dirs.push_back({-1,+1}); }
+    if (p->getColor() == "Black" || isKing(p)) { dirs.push_back({+1,-1}); dirs.push_back({+1,+1}); }
+
+    for (auto [dr, dc] : dirs) {
+        int mr = r + dr,     mc = c + dc;
+        int lr = r + 2*dr,   lc = c + 2*dc;
+        if (mr < 0 || mr > 7 || mc < 0 || mc > 7) continue;
+        if (lr < 0 || lr > 7 || lc < 0 || lc > 7) continue;
+
+        Piece* mid  = src.getPiece(mr, mc);
+        Piece* land = src.getPiece(lr, lc);
+
+        if (!mid)               continue;
+        if (sameTeam(p, mid))  continue;
+        if (land)               continue;
+
+        caps.push_back({lr, lc, mr, mc});
+    }
+    return caps;
+}
+
+std::vector<Checkers::Move> Checkers::getSimpleMoves(int r, int c) const {
+    std::vector<Move> moves;
+    Piece* p = src.getPiece(r, c);
+    if (!p) return moves;
+
+    std::vector<std::pair<int,int>> dirs;
+    if (p->getColor() == "Red"   || isKing(p)) { dirs.push_back({-1,-1}); dirs.push_back({-1,+1}); }
+    if (p->getColor() == "Black" || isKing(p)) { dirs.push_back({+1,-1}); dirs.push_back({+1,+1}); }
+
+    for (auto [dr, dc] : dirs) {
+        int nr = r + dr, nc = c + dc;
+        if (nr < 0 || nr > 7 || nc < 0 || nc > 7) continue;
+        if (src.getPiece(nr, nc))                  continue;
+        moves.push_back({nr, nc, -1, -1});
+    }
+    return moves;
+}
+
+bool Checkers::hasAnyCapture(const std::string& color) const {
+    for (int r = 0; r < 8; ++r)
+        for (int c = 0; c < 8; ++c) {
+            Piece* p = src.getPiece(r, c);
+            if (p && p->getColor() == color && !getCaptures(r, c).empty())
+                return true;
+        }
+    return false;
+}
+
+bool Checkers::hasAnyMove(const std::string& color) const {
+    if (hasAnyCapture(color)) return true;
+    for (int r = 0; r < 8; ++r)
+        for (int c = 0; c < 8; ++c) {
+            Piece* p = src.getPiece(r, c);
+            if (p && p->getColor() == color && !getSimpleMoves(r, c).empty())
+                return true;
+        }
+    return false;
+}
+
+std::vector<std::pair<int,int>> Checkers::getSelectablePieces() const {
+    std::string color    = turn.get();
+    bool        mustCap  = hasAnyCapture(color);
+    std::vector<std::pair<int,int>> result;
+
+    for (int r = 0; r < 8; ++r) {
+        for (int c = 0; c < 8; ++c) {
+            Piece* p = src.getPiece(r, c);
+            if (!p || p->getColor() != color) continue;
+
+            if (mustCap) {
+                if (!getCaptures(r, c).empty()) result.push_back({r, c});
+            } else {
+                if (!getSimpleMoves(r, c).empty()) result.push_back({r, c});
             }
         }
     }
     return result;
 }
 
-std::string Checkers::getWinner() const {
-    return turn.getOther() + " Win";
+void Checkers::promoteIfNeeded(int r, int c) {
+    Piece* p = src.getPiece(r, c);
+    if (!p) return;
+    if (p->getColor() == "Red"   && r == 0) p->setRole("king");
+    if (p->getColor() == "Black" && r == 7) p->setRole("king");
 }
 
-bool Checkers::canJump(const Location& from, const Location& to) const {
-    int fromRow = from.getI(), fromCol = from.getJ();
-    int toRow = to.getI(), toCol = to.getJ();
-    if (toRow < 0 || toRow >= src.getRows() || toCol < 0 || toCol >= src.getColumns()) return false;
-    if (src.getPiece(toRow, toCol) != nullptr) return false;
-    Piece* piece = src.getPiece(fromRow, fromCol);
-    if (piece == nullptr || piece->getColor() != turn.get()) return false;
-    int rowDiff = toRow - fromRow, colDiff = toCol - fromCol;
-    if (std::abs(rowDiff) != 2 || std::abs(colDiff) != 2) return false;
-    if (piece->getRole() != "King") {
-        if (piece->getColor() == "White" && rowDiff != 2) return false;
-        if (piece->getColor() == "Black" && rowDiff != -2) return false;
-    }
-    int midRow = fromRow + rowDiff / 2, midCol = fromCol + colDiff / 2;
-    Piece* midPiece = src.getPiece(midRow, midCol);
-    return (midPiece != nullptr && midPiece->getColor() != piece->getColor());
-}
-
-bool Checkers::canSimpleMove(const Location& from, const Location& to) const {
-    int fromRow = from.getI(), fromCol = from.getJ();
-    int toRow = to.getI(), toCol = to.getJ();
-    if (toRow < 0 || toRow >= src.getRows() || toCol < 0 || toCol >= src.getColumns()) return false;
-    if (src.getPiece(toRow, toCol) != nullptr) return false;
-    Piece* piece = src.getPiece(fromRow, fromCol);
-    if (piece == nullptr || piece->getColor() != turn.get()) return false;
-    int rowDiff = toRow - fromRow, colDiff = toCol - fromCol;
-    if (std::abs(rowDiff) != 1 || std::abs(colDiff) != 1) return false;
-    if (piece->getRole() != "King") {
-        if (piece->getColor() == "White" && rowDiff != 1) return false;
-        if (piece->getColor() == "Black" && rowDiff != -1) return false;
-    }
-    return true;
-}
-
-std::vector<Location> Checkers::getJumpMovesFrom(const Location& from) const {
-    std::vector<Location> jumps;
-    int directions[4][2] = {{2, 2}, {2, -2}, {-2, 2}, {-2, -2}};
-    for (auto& d : directions) {
-        Location to(from.getI() + d[0], from.getJ() + d[1]);
-        if (canJump(from, to)) jumps.push_back(to);
-    }
-    return jumps;
-}
-
-std::vector<Location> Checkers::getSimpleMovesFrom(const Location& from) const {
-    std::vector<Location> moves;
-    int directions[4][2] = {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
-    for (auto& d : directions) {
-        Location to(from.getI() + d[0], from.getJ() + d[1]);
-        if (canSimpleMove(from, to)) moves.push_back(to);
-    }
-    return moves;
-}
-
-bool Checkers::hasJumpMoves() const {
-    for (int r = 0; r < src.getRows(); ++r) {
-        for (int c = 0; c < src.getColumns(); ++c) {
+int Checkers::countPieces(const std::string& color) const {
+    int n = 0;
+    for (int r = 0; r < 8; ++r)
+        for (int c = 0; c < 8; ++c) {
             Piece* p = src.getPiece(r, c);
-            if (p && p->getColor() == turn.get()) {
-                if (!getJumpMovesFrom(Location(r, c)).empty()) return true;
-            }
+            if (p && p->getColor() == color) ++n;
         }
-    }
-    return false;
+    return n;
 }
 
-void Checkers::promoteToKingIfNeeded(const Location& loc) {
-    Piece* piece = src.getPiece(loc.getI(), loc.getJ());
-    if (piece && piece->getRole() != "King") {
-        if ((piece->getColor() == "White" && loc.getI() == 7) ||
-            (piece->getColor() == "Black" && loc.getI() == 0)) {
-            src.Delete(loc.getI(), loc.getJ());
-            src.Add(new Piece(piece->getColor(), "King"), loc.getI(), loc.getJ());
-        }
-    }
+std::string Checkers::buildSelectState() const {
+    auto pieces = getSelectablePieces();
+    std::string res = turn.get();
+    for (auto [r, c] : pieces)
+        res += " " + std::to_string(r) + " " + std::to_string(c);
+    return res;
 }
 
-std::vector<Location> Checkers::allowedPieces() {
-    std::vector<Location> pieces;
-    if (mustContinueJump && pieceSelected) {
-        if (!getJumpMovesFrom(selectedPiece).empty()) {
-            pieces.push_back(selectedPiece);
-            return pieces;
-        }
-    }
-    bool jumpAvail = hasJumpMoves();
-    for (int r = 0; r < src.getRows(); ++r) {
-        for (int c = 0; c < src.getColumns(); ++c) {
-            Piece* p = src.getPiece(r, c);
-            if (p && p->getColor() == turn.get()) {
-                Location loc(r, c);
-                bool has = jumpAvail ? !getJumpMovesFrom(loc).empty() : !getSimpleMovesFrom(loc).empty();
-                if (has) pieces.push_back(loc);
-            }
-        }
-    }
-    return pieces;
+std::string Checkers::buildMoveState(int r, int c) const {
+    bool mustCap = hasAnyCapture(turn.get());
+    auto moves   = mustCap ? getCaptures(r, c) : getSimpleMoves(r, c);
+    std::string res = turn.get() + " selected "
+                      + std::to_string(r) + " " + std::to_string(c);
+    for (auto& m : moves)
+        res += " " + std::to_string(m.toR) + " " + std::to_string(m.toC);
+    return res;
 }
-
-void Checkers::selectPiece(const Location& loc) {
-    Piece* p = src.getPiece(loc.getI(), loc.getJ());
-    if (!p || p->getColor() != turn.get()) return;
-    auto allowed = allowedPieces();
-    for (const auto& a : allowed) {
-        if (a.getI() == loc.getI() && a.getJ() == loc.getJ()) {
-            selectedPiece = loc;
+std::string Checkers::handlePostMove(int toR, int toC,
+                                     bool wasCapture, bool wasPromoted)
+{
+    if (wasCapture && !wasPromoted) {
+        auto moreCaps = getCaptures(toR, toC);
+        if (!moreCaps.empty()) {
+            inChainCapture = true;
+            chainRow = toR;  chainCol = toC;
             pieceSelected = true;
-            return;
+            selRow = toR;    selCol = toC;
+            std::string res = turn.get() + " continue "
+                              + std::to_string(toR) + " " + std::to_string(toC);
+            for (auto& m : moreCaps)
+                res += " " + std::to_string(m.toR) + " " + std::to_string(m.toC);
+            return res;
         }
     }
-}
-
-std::vector<Location> Checkers::allowedMoves() {
-    if (!pieceSelected) return {};
-    if (mustContinueJump) return getJumpMovesFrom(selectedPiece);
-    auto jumps = getJumpMovesFrom(selectedPiece);
-    return jumps.empty() ? getSimpleMovesFrom(selectedPiece) : jumps;
-}
-
-void Checkers::move(const Location& to) {
-    if (!pieceSelected) return;
-    int fR = selectedPiece.getI(), fC = selectedPiece.getJ();
-    int tR = to.getI(), tC = to.getJ();
-
-    if (std::abs(tR - fR) == 2) {
-        src.Delete(fR + (tR - fR) / 2, fC + (tC - fC) / 2);
-    }
-    src.Move(fR, fC, tR, tC);
-    promoteToKingIfNeeded(to);
-
-    if (std::abs(tR - fR) == 2) {
-        selectedPiece = to;
-        if (!getJumpMovesFrom(to).empty()) {
-            mustContinueJump = true;
-            return;
-        }
-    }
-    pieceSelected = false;
-    mustContinueJump = false;
-}
-
-void Checkers::nextTurn() {
-    if (mustContinueJump) return;
-    pieceSelected = false;
+    inChainCapture = false;
+    pieceSelected  = false;
+    selRow = selCol = chainRow = chainCol = -1;
+    std::string opponent = turn.getOther();
+    if (countPieces(opponent) == 0 || !hasAnyMove(opponent))
+        return turn.get() + " Win";
     turn.switchTurn();
+    return buildSelectState();
 }
 
-void Checkers::printBoard() const {}
+std::string Checkers::input(std::string prompt) {
+    if (prompt == "start") {
+        pieceSelected  = false;
+        inChainCapture = false;
+        selRow = selCol = chainRow = chainCol = -1;
+        return buildSelectState();
+    }
+
+    if (prompt == "getboard") {
+        std::string res;
+        for (int r = 0; r < 8; ++r)
+            for (int c = 0; c < 8; ++c) {
+                Piece* p = src.getPiece(r, c);
+                if (p)
+                    res += std::to_string(r) + " " + std::to_string(c)
+                           + " " + p->getColor()
+                           + " " + p->getRole() + " ";
+            }
+        return res;
+    }
+
+    if (prompt.size() < 9 || prompt.substr(0, 7) != "select ")
+        return "Invalid Command";
+
+    int clickR, clickC;
+    {
+        std::istringstream iss(prompt.substr(7));
+        if (!(iss >> clickR >> clickC)) return "Invalid Command";
+        if (clickR < 0 || clickR > 7 || clickC < 0 || clickC > 7)
+            return "Invalid Command";
+    }
+
+    std::string color  = turn.get();
+    Piece*      clicked = src.getPiece(clickR, clickC);
+
+    if (inChainCapture) {
+        if (clickR == chainRow && clickC == chainCol) {
+            return buildMoveState(chainRow, chainCol);
+        }
+
+        auto caps = getCaptures(chainRow, chainCol);
+        for (auto& m : caps) {
+            if (m.toR == clickR && m.toC == clickC) {
+                src.Delete(m.capR, m.capC);
+                src.Move(chainRow, chainCol, clickR, clickC);
+                bool promoted = false;
+                promoteIfNeeded(clickR, clickC);
+                Piece* moved = src.getPiece(clickR, clickC);
+                if (moved && moved->getRole() == "king") {
+                    if ((color == "Red"   && clickR == 0) ||
+                        (color == "Black" && clickR == 7))
+                        promoted = true;
+                }
+                return handlePostMove(clickR, clickC, true, promoted);
+            }
+        }
+        return "Invalid Move";
+    }
+    if (!pieceSelected) {
+        if (!clicked || clicked->getColor() != color)
+            return "Invalid Move";
+        auto selectable = getSelectablePieces();
+        bool ok = false;
+        for (auto [sr, sc] : selectable)
+            if (sr == clickR && sc == clickC) { ok = true; break; }
+        if (!ok) return "Invalid Move";
+
+        pieceSelected = true;
+        selRow = clickR; selCol = clickC;
+        return buildMoveState(clickR, clickC);
+    }
+
+    if (clickR == selRow && clickC == selCol) {
+        pieceSelected = false;
+        selRow = selCol = -1;
+        return buildSelectState();
+    }
+
+    if (clicked && clicked->getColor() == color) {
+        auto selectable = getSelectablePieces();
+        bool ok = false;
+        for (auto [sr, sc] : selectable)
+            if (sr == clickR && sc == clickC) { ok = true; break; }
+
+        if (ok) {
+            selRow = clickR; selCol = clickC;
+            return buildMoveState(clickR, clickC);
+        }
+        return buildMoveState(selRow, selCol);
+    }
+
+    {
+        bool mustCap = hasAnyCapture(color);
+        auto moves   = mustCap ? getCaptures(selRow, selCol)
+                             : getSimpleMoves(selRow, selCol);
+
+        for (auto& m : moves) {
+            if (m.toR == clickR && m.toC == clickC) {
+                bool wasCapture = (m.capR != -1);
+                if (wasCapture) src.Delete(m.capR, m.capC);
+
+                src.Move(selRow, selCol, clickR, clickC);
+
+                bool promoted = false;
+                {
+                    Piece* p = src.getPiece(clickR, clickC);
+                    bool wasKing = isKing(p);
+                    promoteIfNeeded(clickR, clickC);
+                    if (!wasKing && isKing(src.getPiece(clickR, clickC)))
+                        promoted = true;
+                }
+
+                pieceSelected = false;
+                return handlePostMove(clickR, clickC, wasCapture, promoted);
+            }
+        }
+    }
+    return "Invalid Move";
+}

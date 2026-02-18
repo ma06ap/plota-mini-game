@@ -92,9 +92,9 @@ void GameServer::handleCreateGame(QTcpSocket* senderSocket, QString gameType) {
     session->hostTimeLeft = 180;
     session->guestTimeLeft = 180;
 
-    if (gameType == "Checkers") session->gameLogic = new Checkers();
-    else if (gameType == "Othello") session->gameLogic = new Othello();
-    else if (gameType == "Connect-4") session->gameLogic = new ConnectFour();
+    if (gameType == "Checkers")    session->gameLogic = new Checkers();
+    else if (gameType == "Othello")    session->gameLogic = new Othello();
+    else if (gameType == "Connect-4")  session->gameLogic = new ConnectFour();
 
     session->turnTimer = new QTimer(this);
     connect(session->turnTimer, &QTimer::timeout, this, &GameServer::onTurnTimerTick);
@@ -120,12 +120,15 @@ void GameServer::handleJoinGame(QTcpSocket* senderSocket, QString roomId) {
     session->guest = senderSocket;
     sendToClient(senderSocket, "JOIN_SUCCESS:" + session->gameType);
 
-    QString startMsg = "START_GAME:" + session->gameType + ":" + roomId;
+    QString startMsg = "START_GAME:" + session->gameType + ":" + session->roomId;
     broadcastToSession(session, startMsg);
 
     if(session->gameLogic) {
         QString board = QString::fromStdString(session->gameLogic->input("getboard"));
         broadcastToSession(session, "BOARD:" + board);
+
+        QString state = QString::fromStdString(session->gameLogic->input("start"));
+        broadcastToSession(session, "STATE:" + state);
     }
 
     if(session->turnTimer) session->turnTimer->start(1000);
@@ -137,25 +140,34 @@ void GameServer::handleMove(QTcpSocket* senderSocket, int row, int col) {
 
     bool isHost = (senderSocket == session->host);
     std::string currentTurn = session->gameLogic->getCurrentPlayer();
-
     bool isHostTurn = false;
-    if (session->gameType == "Connect-4") isHostTurn = (currentTurn == "Red");
-    else if (session->gameType == "Checkers") isHostTurn = (currentTurn == "White");
-    else if (session->gameType == "Othello") isHostTurn = (currentTurn == "Black");
+    if (session->gameType == "Connect-4")  isHostTurn = (currentTurn == "Red");
+    else if (session->gameType == "Checkers")  isHostTurn = (currentTurn == "Red");
+    else if (session->gameType == "Othello")   isHostTurn = (currentTurn == "Black");
 
     if (isHost && !isHostTurn) return;
     if (!isHost && isHostTurn) return;
 
     try {
-        std::string res = session->gameLogic->input("select " + std::to_string(row) + " " + std::to_string(col));
-
+        std::string res = session->gameLogic->input(
+            "select " + std::to_string(row) + " " + std::to_string(col));
         QString board = QString::fromStdString(session->gameLogic->input("getboard"));
         broadcastToSession(session, "BOARD:" + board);
-
+        if (!res.empty() && res != "Invalid Command" && res != "Invalid command") {
+            broadcastToSession(session, "STATE:" + QString::fromStdString(res));
+        }
         if (res.find("Win") != std::string::npos) {
             endGame(session, isHost ? "HOST_WON" : "GUEST_WON");
+            return;
         }
-    } catch (...) {}
+        if (res == "Draw") {
+            endGame(session, "DRAW");
+            return;
+        }
+
+    } catch (...) {
+        emit logMessage("Exception in handleMove for session " + session->roomId);
+    }
 }
 
 void GameServer::handleLeave(QTcpSocket* senderSocket) {
@@ -173,16 +185,16 @@ void GameServer::onTurnTimerTick() {
         std::string turn = session->gameLogic->getCurrentPlayer();
 
         bool isHostTurn = false;
-        if (session->gameType == "Connect-4") isHostTurn = (turn == "Red");
-        else if (session->gameType == "Checkers") isHostTurn = (turn == "White");
-        else if (session->gameType == "Othello") isHostTurn = (turn == "Black");
+        if (session->gameType == "Connect-4")  isHostTurn = (turn == "Red");
+        else if (session->gameType == "Checkers")  isHostTurn = (turn == "Red");
+        else if (session->gameType == "Othello")   isHostTurn = (turn == "Black");
 
         if (isHostTurn) {
             session->hostTimeLeft--;
-            if (session->hostTimeLeft <= 0) endGame(session, "GUEST_WON_TIMEOUT");
+            if (session->hostTimeLeft <= 0) { endGame(session, "GUEST_WON_TIMEOUT"); return; }
         } else {
             session->guestTimeLeft--;
-            if (session->guestTimeLeft <= 0) endGame(session, "HOST_WON_TIMEOUT");
+            if (session->guestTimeLeft <= 0) { endGame(session, "HOST_WON_TIMEOUT"); return; }
         }
 
         QString timeMsg = "TIME:" + QString::number(session->hostTimeLeft) + ":" + QString::number(session->guestTimeLeft);
@@ -201,7 +213,6 @@ void GameServer::endGame(GameSession* session, QString reason) {
     delete session->turnTimer;
     delete session;
 }
-
 
 QString GameServer::generateRoomId() {
     int code = QRandomGenerator::global()->bounded(1000, 9999);

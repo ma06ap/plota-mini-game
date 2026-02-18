@@ -7,37 +7,45 @@
 #include "../Location.h"
 #include <vector>
 #include <string>
-#include <cmath>
+#include <sstream>
 
 class Checkers : public Game {
+public:
+    struct Move {
+        int toR, toC;
+        int capR, capC;
+    };
+
 private:
     Turn turn;
-    bool pieceSelected;
-    Location selectedPiece;
-    bool mustContinueJump;
 
-    bool canJump(const Location& from, const Location& to) const;
-    bool canSimpleMove(const Location& from, const Location& to) const;
-    std::vector<Location> getJumpMovesFrom(const Location& from) const;
-    std::vector<Location> getSimpleMovesFrom(const Location& from) const;
-    bool hasJumpMoves() const;
-    void promoteToKingIfNeeded(const Location& loc);
-    bool isPieceSelected() const { return pieceSelected; }
+    bool pieceSelected;
+    int selRow, selCol;
+
+    bool inChainCapture;
+    int chainRow, chainCol;
+
+    bool isKing(Piece* p) const;
+    bool sameTeam(Piece* a, Piece* b) const;
+
+    std::vector<Move> getCaptures(int r, int c) const;
+    std::vector<Move> getSimpleMoves(int r, int c) const;
+    bool hasAnyCapture(const std::string& color) const;
+    bool hasAnyMove(const std::string& color) const;
+    std::vector<std::pair<int,int>> getSelectablePieces() const;
+
+    void promoteIfNeeded(int r, int c);
+    int  countPieces(const std::string& color) const;
+    std::string buildSelectState() const;
+    std::string buildMoveState(int r, int c) const;
+    std::string handlePostMove(int toR, int toC, bool wasCapture, bool wasPromoted);
 
 public:
     Checkers();
-    std::string getName() const override;
+    std::string getName()           const override;
+    std::string getCurrentPlayer()  const override;
+    void        printBoard()        const override;
     std::string input(std::string prompt) override;
-    std::string getCurrentPlayer() const override;
-    void printBoard() const override;
-
-    std::string getBoard() const;
-    std::string getWinner() const;
-    std::vector<Location> allowedPieces();
-    std::vector<Location> allowedMoves();
-    void selectPiece(const Location& loc);
-    void move(const Location& to);
-    void nextTurn();
 };
 
 #endif // CHECKERS_H
