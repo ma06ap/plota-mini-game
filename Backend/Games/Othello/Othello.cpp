@@ -1,7 +1,3 @@
-//
-// Created by matin on 2/14/26.
-//
-
 #include "Othello.h"
 #include <iostream>
 
@@ -306,7 +302,6 @@ void Othello::printBoard() const {
 std::string Othello::getCurrentPlayer() const {
     return turn.get();
 }
-
 std::string Othello::input(std::string prompt) {
     if (prompt == "start") {
         auto tmp = this->allowed();
@@ -330,13 +325,18 @@ std::string Othello::input(std::string prompt) {
         return result;
     }
 
-    char ii = prompt[4];
-    char jj = prompt[6];
+    // *** اصلاح شده: خواندن صحیح فرمت "select r c" ***
+    // s e l e c t   r   c
+    // 0 1 2 3 4 5 6 7 8 9
+    char ii = prompt[7]; // سطر
+    char jj = prompt[9]; // ستون
     int i = ii - '0';
     int j = jj - '0';
+
     Location l(i, j);
     this->addPiece(l);
     this->nextTurn();
+
     auto tmp = this->allowed();
     if (tmp.empty()) {
         this->nextTurn();

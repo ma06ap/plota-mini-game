@@ -1,163 +1,227 @@
 #include "GameServer.h"
-#include <QDebug>
-#include <string>
+#include <QRandomGenerator>
+#include <utility>
 
 GameServer::GameServer(QObject *parent) : QObject(parent) {
     server = new QTcpServer(this);
-    gameLogic = nullptr;
     auth = new AuthHandler("users.csv");
+    connect(server, &QTcpServer::newConnection, this, &GameServer::onNewConnection);
 }
 
 bool GameServer::start(int port) {
     if (server->listen(QHostAddress::Any, port)) {
         emit logMessage("Server started on port " + QString::number(port));
         return true;
-    } else {
-        emit logMessage("Error: " + server->errorString());
-        return false;
     }
+    emit logMessage("Error: " + server->errorString());
+    return false;
 }
 
 void GameServer::stop() {
-    for(QTcpSocket* client : clients) {
+    for(auto session : sessions) {
+        if(session->gameLogic) delete session->gameLogic;
+        if(session->turnTimer) session->turnTimer->stop();
+        delete session;
+    }
+    sessions.clear();
+    for(auto client : std::as_const(allClients)) {
         client->disconnectFromHost();
     }
+    allClients.clear();
+
     server->close();
     emit logMessage("Server stopped.");
 }
 
 void GameServer::onNewConnection() {
     QTcpSocket *socket = server->nextPendingConnection();
-    clients.append(socket);
-
+    allClients.append(socket);
     connect(socket, &QTcpSocket::readyRead, this, &GameServer::onReadyRead);
     connect(socket, &QTcpSocket::disconnected, this, &GameServer::onDisconnected);
-
-    emit logMessage("Client connected. IP: " + socket->peerAddress().toString());
-    emit playerCountChanged(clients.size());
-
-    if (gameLogic != nullptr && clients.size() >= 2) {
-    }
+    emit logMessage("Client connected: " + socket->peerAddress().toString());
 }
 
 void GameServer::onReadyRead() {
-    QTcpSocket *senderSocket = qobject_cast<QTcpSocket*>(sender());
-    if (!senderSocket) return;
+    QTcpSocket *clientSocket = qobject_cast<QTcpSocket*>(sender());
+    if (!clientSocket) return;
 
-    while (senderSocket->canReadLine()) {
-        QString data = QString::fromUtf8(senderSocket->readLine()).trimmed();
+    while (clientSocket->canReadLine()) {
+        QString line = QString::fromUtf8(clientSocket->readLine()).trimmed();
 
-        if (!data.startsWith("CLICK")) {
-            emit logMessage("Cmd: " + data);
+        if (line.startsWith("LOGIN:")) {
+            QStringList parts = line.split(":");
+            if(parts.size() >= 3) {
+                if(auth->login(parts[1], parts[2])) sendToClient(clientSocket, "LOGIN_SUCCESS");
+                else sendToClient(clientSocket, "LOGIN_FAIL");
+            }
         }
-
-        if (data.startsWith("LOGIN:")) {
-            QStringList parts = data.split(":");
+        else if (line.startsWith("SIGNUP:")) {
+            QStringList parts = line.split(":");
+            if(parts.size() >= 3) {
+                if(auth->signup(parts[1], parts[2])) sendToClient(clientSocket, "SIGNUP_SUCCESS");
+                else sendToClient(clientSocket, "SIGNUP_FAIL");
+            }
+        }
+        else if (line.startsWith("CREATE_GAME:")) {
+            QString gameType = line.mid(12);
+            handleCreateGame(clientSocket, gameType);
+        }
+        else if (line.startsWith("JOIN_GAME:")) {
+            QString roomId = line.mid(10);
+            handleJoinGame(clientSocket, roomId);
+        }
+        else if (line.startsWith("CLICK:")) {
+            QStringList parts = line.split(":");
             if (parts.size() == 3) {
-                bool ok = auth->login(parts[1], parts[2]);
-                if (ok) {
-                    sendToClient(senderSocket, "LOGIN_SUCCESS");
-                    emit logMessage("User logged in: " + parts[1]);
-                } else {
-                    sendToClient(senderSocket, "LOGIN_FAIL");
-                    emit logMessage("Failed login attempt: " + parts[1]);
-                }
+                handleMove(clientSocket, parts[1].toInt(), parts[2].toInt());
             }
         }
-        else if (data.startsWith("SIGNUP:")) {
-            QStringList parts = data.split(":");
-            if (parts.size() == 3) {
-                bool ok = auth->signup(parts[1], parts[2]);
-                if (ok) {
-                    sendToClient(senderSocket, "SIGNUP_SUCCESS");
-                    emit logMessage("New user registered: " + parts[1]);
-                } else {
-                    sendToClient(senderSocket, "SIGNUP_FAIL");
-                }
-            }
-        }
-
-        else if (data.startsWith("SELECT_GAME:")) {
-            QString gameName = data.mid(12);
-            resetGame(gameName);
-
-            if (clients.size() >= 2) {
-                broadcastGameStart();
-            } else {
-                emit logMessage("Game selected (" + gameName + "). Waiting for opponent...");
-            }
-        }
-
-        else if (data.startsWith("CLICK:")) {
-            if (!gameLogic) return;
-
-            QStringList parts = data.split(":");
-            if (parts.size() == 3) {
-                std::string r = parts[1].toStdString();
-                std::string c = parts[2].toStdString();
-                std::string result;
-                std::string name = gameLogic->getName();
-
-                try {
-                    if (name == "Checkers") {
-                        Checkers* chk = dynamic_cast<Checkers*>(gameLogic);
-                        if (chk->isPieceSelected()) {
-                            result = gameLogic->input("move " + r + " " + c);
-                        } else {
-                            result = gameLogic->input("select " + r + " " + c);
-                        }
-                    }
-                    else if (name == "Othello") {
-                        result = gameLogic->input("put " + r + " " + c);
-                    }
-                    else if (name == "Connect-4") {
-                        result = gameLogic->input("put " + c);
-                    }
-
-                    emit logMessage("Logic Result: " + QString::fromStdString(result));
-
-                    broadcastBoard();
-
-                } catch (const std::exception& e) {
-                    emit logMessage("Logic Error: " + QString(e.what()));
-                }
-            }
+        else if (line == "LEAVE_GAME") {
+            handleLeave(clientSocket);
         }
     }
 }
 
-void GameServer::resetGame(QString gameName) {
-    if (gameLogic) delete gameLogic;
+void GameServer::handleCreateGame(QTcpSocket* senderSocket, QString gameType) {
+    QString roomId = generateRoomId();
 
-    if (gameName == "Checkers") gameLogic = new Checkers();
-    else if (gameName == "Othello") gameLogic = new Othello();
-    else if (gameName == "Connect-4") gameLogic = new ConnectFour();
+    GameSession* session = new GameSession();
+    session->roomId = roomId;
+    session->gameType = gameType;
+    session->host = senderSocket;
+    session->hostTimeLeft = 180;
+    session->guestTimeLeft = 180;
 
-    emit logMessage("Game switched to: " + gameName);
+    if (gameType == "Checkers") session->gameLogic = new Checkers();
+    else if (gameType == "Othello") session->gameLogic = new Othello();
+    else if (gameType == "Connect-4") session->gameLogic = new ConnectFour();
+
+    session->turnTimer = new QTimer(this);
+    connect(session->turnTimer, &QTimer::timeout, this, &GameServer::onTurnTimerTick);
+
+    sessions.insert(roomId, session);
+
+    sendToClient(senderSocket, "GAME_CREATED:" + roomId);
+    emit logMessage("Game created. Room: " + roomId + " (" + gameType + ")");
 }
 
-void GameServer::broadcastGameStart() {
-    if (!gameLogic) return;
-
-    emit logMessage("Broadcasting START_GAME to all clients...");
-    QString type = QString::fromStdString(gameLogic->getName());
-
-    for (QTcpSocket* client : clients) {
-        sendToClient(client, "START_GAME:" + type);
+void GameServer::handleJoinGame(QTcpSocket* senderSocket, QString roomId) {
+    if (!sessions.contains(roomId)) {
+        sendToClient(senderSocket, "JOIN_FAIL:Invalid Room ID");
+        return;
     }
-    broadcastBoard();
+
+    GameSession* session = sessions[roomId];
+    if (session->guest != nullptr) {
+        sendToClient(senderSocket, "JOIN_FAIL:Room Full");
+        return;
+    }
+
+    session->guest = senderSocket;
+    sendToClient(senderSocket, "JOIN_SUCCESS:" + session->gameType);
+
+    QString startMsg = "START_GAME:" + session->gameType + ":" + roomId;
+    broadcastToSession(session, startMsg);
+
+    if(session->gameLogic) {
+        QString board = QString::fromStdString(session->gameLogic->input("getboard"));
+        broadcastToSession(session, "BOARD:" + board);
+    }
+
+    if(session->turnTimer) session->turnTimer->start(1000);
 }
 
-void GameServer::broadcastBoard() {
-    if (!gameLogic) return;
-    QString boardStr = QString::fromStdString(gameLogic->input("getboard"));
-    for (QTcpSocket* client : clients) {
-        sendToClient(client, "BOARD:" + boardStr);
+void GameServer::handleMove(QTcpSocket* senderSocket, int row, int col) {
+    GameSession* session = findSessionBySocket(senderSocket);
+    if (!session || !session->gameLogic || !session->guest) return;
+
+    bool isHost = (senderSocket == session->host);
+    std::string currentTurn = session->gameLogic->getCurrentPlayer();
+
+    bool isHostTurn = false;
+    if (session->gameType == "Connect-4") isHostTurn = (currentTurn == "Red");
+    else if (session->gameType == "Checkers") isHostTurn = (currentTurn == "White");
+    else if (session->gameType == "Othello") isHostTurn = (currentTurn == "Black");
+
+    if (isHost && !isHostTurn) return;
+    if (!isHost && isHostTurn) return;
+
+    try {
+        std::string res = session->gameLogic->input("select " + std::to_string(row) + " " + std::to_string(col));
+
+        QString board = QString::fromStdString(session->gameLogic->input("getboard"));
+        broadcastToSession(session, "BOARD:" + board);
+
+        if (res.find("Win") != std::string::npos) {
+            endGame(session, isHost ? "HOST_WON" : "GUEST_WON");
+        }
+    } catch (...) {}
+}
+
+void GameServer::handleLeave(QTcpSocket* senderSocket) {
+    GameSession* session = findSessionBySocket(senderSocket);
+    if (!session) return;
+
+    QString winner = (senderSocket == session->host) ? "GUEST_WON_OPPONENT_LEFT" : "HOST_WON_OPPONENT_LEFT";
+    endGame(session, winner);
+}
+
+void GameServer::onTurnTimerTick() {
+    for (auto session : sessions) {
+        if (!session->gameLogic || !session->guest) continue;
+
+        std::string turn = session->gameLogic->getCurrentPlayer();
+
+        bool isHostTurn = false;
+        if (session->gameType == "Connect-4") isHostTurn = (turn == "Red");
+        else if (session->gameType == "Checkers") isHostTurn = (turn == "White");
+        else if (session->gameType == "Othello") isHostTurn = (turn == "Black");
+
+        if (isHostTurn) {
+            session->hostTimeLeft--;
+            if (session->hostTimeLeft <= 0) endGame(session, "GUEST_WON_TIMEOUT");
+        } else {
+            session->guestTimeLeft--;
+            if (session->guestTimeLeft <= 0) endGame(session, "HOST_WON_TIMEOUT");
+        }
+
+        QString timeMsg = "TIME:" + QString::number(session->hostTimeLeft) + ":" + QString::number(session->guestTimeLeft);
+        broadcastToSession(session, timeMsg);
     }
+}
+
+void GameServer::endGame(GameSession* session, QString reason) {
+    if(!session) return;
+    if(session->turnTimer) session->turnTimer->stop();
+
+    broadcastToSession(session, "GAME_OVER:" + reason);
+
+    sessions.remove(session->roomId);
+    delete session->gameLogic;
+    delete session->turnTimer;
+    delete session;
+}
+
+
+QString GameServer::generateRoomId() {
+    int code = QRandomGenerator::global()->bounded(1000, 9999);
+    return QString::number(code);
+}
+
+GameSession* GameServer::findSessionBySocket(QTcpSocket* socket) {
+    for (auto session : std::as_const(sessions)) {
+        if (session->host == socket || session->guest == socket) return session;
+    }
+    return nullptr;
+}
+
+void GameServer::broadcastToSession(GameSession* s, QString msg) {
+    if(s->host) sendToClient(s->host, msg);
+    if(s->guest) sendToClient(s->guest, msg);
 }
 
 void GameServer::sendToClient(QTcpSocket* socket, QString msg) {
-    if (socket->state() == QAbstractSocket::ConnectedState) {
+    if(socket && socket->state() == QAbstractSocket::ConnectedState) {
         socket->write((msg + "\n").toUtf8());
         socket->flush();
     }
@@ -165,15 +229,11 @@ void GameServer::sendToClient(QTcpSocket* socket, QString msg) {
 
 void GameServer::onDisconnected() {
     QTcpSocket *socket = qobject_cast<QTcpSocket*>(sender());
-    clients.removeAll(socket);
+    if(!socket) return;
+
+    allClients.removeAll(socket);
+    handleLeave(socket);
+
     socket->deleteLater();
-
     emit logMessage("Client disconnected.");
-    emit playerCountChanged(clients.size());
-
-    if (clients.isEmpty() && gameLogic) {
-        delete gameLogic;
-        gameLogic = nullptr;
-        emit logMessage("All players left. Game logic reset.");
-    }
 }

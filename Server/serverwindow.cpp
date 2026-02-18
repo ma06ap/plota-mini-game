@@ -25,6 +25,7 @@ void ServerWindow::on_btnStart_clicked()
         ui->btnStart->setEnabled(false);
         ui->txtPort->setEnabled(false);
         ui->btnStop->setEnabled(true);
+        ui->txtLog->append("--- Server Listening ---");
     }
 }
 
@@ -34,7 +35,6 @@ void ServerWindow::on_btnStop_clicked()
     ui->btnStart->setEnabled(true);
     ui->txtPort->setEnabled(true);
     ui->btnStop->setEnabled(false);
-    updatePlayerCount(0);
 }
 
 void ServerWindow::updateLog(QString msg)

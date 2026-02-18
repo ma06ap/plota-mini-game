@@ -1,5 +1,5 @@
 #include "Connect-4.h"
-
+#include <iostream>
 
 ConnectFour::ConnectFour() : Game() , turn("Red","Yellow") {
     src = Board(6, 7);
@@ -9,8 +9,12 @@ std::string ConnectFour::getName() const {
     return "Connect-4";
 }
 
+std::string ConnectFour::getCurrentPlayer() const {
+    return turn.get();
+}
+
 void ConnectFour::addColumn(int col) {
-    col--;
+
     if (col < 0 || col >= src.getColumns()) {
         throw std::out_of_range("Column index out of range");
     }
@@ -58,14 +62,10 @@ bool ConnectFour::checkHorizontal() {
             if (src.getPiece(i,j) != nullptr && src.getPiece(i,j)->getColor() == turn.get()) {
                 count++;
                 if (count == 4) {
-                    location[0].setI(i);
-                    location[0].setJ(j);
-                    location[1].setI(i-1);
-                    location[1].setJ(j);
-                    location[2].setI(i-2);
-                    location[2].setJ(j);
-                    location[3].setI(i-3);
-                    location[3].setJ(j);
+                    location[0].setI(i); location[0].setJ(j);
+                    location[1].setI(i); location[1].setJ(j-1);
+                    location[2].setI(i); location[2].setJ(j-2);
+                    location[3].setI(i); location[3].setJ(j-3);
                     return true;
                 }
             } else {
@@ -83,14 +83,10 @@ bool ConnectFour::checkVertical() {
             if (src.getPiece(j,i) != nullptr && src.getPiece(j,i)->getColor() == turn.get()) {
                 count++;
                 if (count == 4) {
-                    location[0].setJ(j);
-                    location[0].setI(i);
-                    location[1].setJ(j-1);
-                    location[1].setI(i);
-                    location[2].setJ(j-2);
-                    location[2].setI(i);
-                    location[3].setJ(j-3);
-                    location[3].setI(i);
+                    location[0].setJ(i); location[0].setI(j);
+                    location[1].setJ(i); location[1].setI(j-1);
+                    location[2].setJ(i); location[2].setI(j-2);
+                    location[3].setJ(i); location[3].setI(j-3);
                     return true;
                 }
             } else {
@@ -108,14 +104,6 @@ bool ConnectFour::checkDiagonal1() {
                 src.getPiece(i+1,j+1) != nullptr && src.getPiece(i+1,j+1)->getColor() == turn.get() &&
                 src.getPiece(i+2,j+2) != nullptr && src.getPiece(i+2,j+2)->getColor() == turn.get() &&
                 src.getPiece(i+3,j+3) != nullptr && src.getPiece(i+3,j+3)->getColor() == turn.get()) {
-                location[0].setI(i);
-                location[0].setJ(j);
-                location[1].setI(i+1);
-                location[1].setJ(j+1);
-                location[2].setI(i+2);
-                location[2].setJ(j+2);
-                location[3].setI(i+3);
-                location[3].setJ(j+3);
                 return true;
             }
         }
@@ -130,14 +118,6 @@ bool ConnectFour::checkDiagonal2() {
                 src.getPiece(i+1,j-1) != nullptr && src.getPiece(i+1,j-1)->getColor() == turn.get() &&
                 src.getPiece(i+2,j-2) != nullptr && src.getPiece(i+2,j-2)->getColor() == turn.get() &&
                 src.getPiece(i+3,j-3) != nullptr && src.getPiece(i+3,j-3)->getColor() == turn.get()) {
-                location[0].setI(i);
-                location[0].setJ(j);
-                location[1].setI(i+1);
-                location[1].setJ(j-1);
-                location[2].setI(i+2);
-                location[2].setJ(j-2);
-                location[3].setI(i+3);
-                location[3].setJ(j-3);
                 return true;
             }
         }
@@ -185,10 +165,15 @@ std::string ConnectFour::input(std::string prompt) {
         return result;
     }
 
-    char input = prompt[4];
-    int col = input-'0';
-    std::cout << col << std::endl;
-    this->addColumn(col);
+    char inputChar = prompt[9];
+    int col = inputChar - '0';
+
+    try {
+        this->addColumn(col);
+    } catch (...) {
+        return "Invalid Move";
+    }
+
     if (this->checkWin()) {
         return (turn.get() + " " + "Win");
     }

@@ -1,26 +1,27 @@
-#pragma once
-
-
-#include <filesystem>
-#include <format>
+#ifndef GAME_H
+#define GAME_H
 
 #include "Board.h"
-#include "Turn.h"
-#include "Status.h"
 #include <string>
 #include <vector>
 
-
 class Game {
 protected:
-     Board src;
-     int id;
+    int id;
+    Board src;
+
 public:
-     virtual ~Game() = default;
-     virtual std::string getName() const = 0;
-     Game();
-     void setId (int i);
-     int getId() const;
-     virtual void printBoard() const = 0;
-     virtual std::string input(std::string prompt) = 0;
+    Game();
+    virtual ~Game() {}
+
+    virtual std::string input(std::string prompt) = 0;
+    virtual std::string getName() const = 0;
+
+    virtual std::string getCurrentPlayer() const = 0;
+    virtual void printBoard() const = 0;
+
+    void setId(int i);
+    int getId() const;
 };
+
+#endif // GAME_H

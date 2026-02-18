@@ -1,7 +1,3 @@
-//
-// Created by matin on 2/14/26.
-//
-
 #ifndef PLOTA_MINI_GAME_LOCATION_H
 #define PLOTA_MINI_GAME_LOCATION_H
 

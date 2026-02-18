@@ -1,21 +1,20 @@
-//
-// Created by matin on 2/14/26.
-//
-
-#ifndef PLOTA_MINI_GAME_CHECKERS_H
-#define PLOTA_MINI_GAME_CHECKERS_H
+#ifndef CHECKERS_H
+#define CHECKERS_H
 
 #include "../Game.h"
 #include "../Turn.h"
+#include "../Piece.h"
 #include "../Location.h"
 #include <vector>
+#include <string>
+#include <cmath>
 
-class Checkers final : public Game {
+class Checkers : public Game {
+private:
     Turn turn;
-    Location selectedPiece;
     bool pieceSelected;
+    Location selectedPiece;
     bool mustContinueJump;
-
 
     bool canJump(const Location& from, const Location& to) const;
     bool canSimpleMove(const Location& from, const Location& to) const;
@@ -23,26 +22,22 @@ class Checkers final : public Game {
     std::vector<Location> getSimpleMovesFrom(const Location& from) const;
     bool hasJumpMoves() const;
     void promoteToKingIfNeeded(const Location& loc);
+    bool isPieceSelected() const { return pieceSelected; }
 
 public:
     Checkers();
     std::string getName() const override;
-    void printBoard() const override;
     std::string input(std::string prompt) override;
-
-    std::vector<Location> allowedPieces();
-    void selectPiece(const Location& loc);
-    std::vector<Location> allowedMoves();
-    void move(const Location& to);
-    void nextTurn();
-
-    std::string getCurrentPlayer() const;
-    Location getSelectedPiece() const { return selectedPiece; }
-    bool isPieceSelected() const { return pieceSelected; }
+    std::string getCurrentPlayer() const override;
+    void printBoard() const override;
 
     std::string getBoard() const;
     std::string getWinner() const;
+    std::vector<Location> allowedPieces();
+    std::vector<Location> allowedMoves();
+    void selectPiece(const Location& loc);
+    void move(const Location& to);
+    void nextTurn();
 };
 
-
-#endif //PLOTA_MINI_GAME_CHECKERS_H
+#endif // CHECKERS_H

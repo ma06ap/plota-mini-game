@@ -4,23 +4,18 @@
 #include <QString>
 #include <QFile>
 #include <QTextStream>
-#include <QCryptographicHash>
+#include <QStringList>
 #include <QDebug>
+#include <QDir>
 
-class AuthHandler
-{
+class AuthHandler {
 public:
-    AuthHandler(QString filename = "users.csv");
-
+    AuthHandler(QString filename);
     bool login(QString username, QString password);
-
     bool signup(QString username, QString password);
 
 private:
     QString m_filename;
-
-    QString hashPassword(QString password);
-
     bool userExists(QString username);
 };
 
