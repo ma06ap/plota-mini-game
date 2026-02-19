@@ -1,0 +1,55 @@
+# ==========================================
+# Plota Game Hub - .gitignore
+# ==========================================
+
+# C++ / Compiled files
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+*.obj
+*.a
+*.lib
+
+# Qt / Qt Creator specific
+object_script.*.Release
+object_script.*.Debug
+*_plugin_import.cpp
+/.qmake.cache
+/.qmake.stash
+*.pro.user
+*.pro.user.*
+*.moc
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+Makefile*
+*build-*
+
+# CMake (if used)
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles/
+Testing/
+Makefile
+cmake_install.cmake
+compile_commands.json
+.qt/
+
+# IDEs
+.idea/
+.vscode/
+
+# Project specific databases (Do not track live user data)
+users.csv
+history.csv
+
+# Output directories
+debug/
+release/
+bin/
+Plota_App/
+PlotaInstaller/
