@@ -57,7 +57,6 @@ private:
     QWidget *pageEditProfile;   // Index 3
     QWidget *pageGame;          // Index 4
 
-    // --- Login / Connection ---
     QLineEdit *leIp;
     QLineEdit *lePort;
     QPushButton *btnConnect;
@@ -76,14 +75,12 @@ private:
     QPushButton *btnSignup;
     QLabel *lblStatus;
 
-    // --- Main Menu ---
     QPushButton *btnMenuCheckers;
     QPushButton *btnMenuOthello;
     QPushButton *btnMenuConnect4;
     QPushButton *btnMenuEditProfile;
     QPushButton *btnMenuLogout;
 
-    // --- Game Dashboard ---
     QLabel *lblDashTitle;
     QLabel *lblDashScore;
     QTableWidget *tblHistory;
@@ -92,7 +89,6 @@ private:
     QPushButton *btnDashJoin;
     QPushButton *btnDashBack;
 
-    // --- Edit Profile ---
     QLineEdit *leEditName;
     QLineEdit *leEditUsername;
     QLineEdit *leEditPhone;
@@ -101,7 +97,6 @@ private:
     QPushButton *btnSaveProfile;
     QPushButton *btnEditBack;
 
-    // --- Game Page ---
     QPushButton *btnBack;
     QLabel *lblGameTitle;
     QLabel *lblRoomId;
@@ -114,7 +109,6 @@ private:
     QString activeGame;
     QString currentUser;
 
-    // --- Checkers / Othello Highlights ---
     QPair<int,int> selectedCell = {-1, -1};
     QList<QPair<int,int>> validMoveCells;
     QList<QPair<int,int>> selectablePieces;

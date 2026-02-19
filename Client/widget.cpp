@@ -248,7 +248,10 @@ void Widget::setupGameDashboardPage() {
     connect(btnDashJoin, &QPushButton::clicked, [this](){
         if(!leDashJoin->text().isEmpty()) sendCommand("JOIN_GAME:" + leDashJoin->text());
     });
-    connect(btnDashBack, &QPushButton::clicked, [this](){ stackedWidget->setCurrentIndex(1); });
+    connect(btnDashBack, &QPushButton::clicked, [this](){
+        stackedWidget->setCurrentIndex(1);
+        activeGame = "";
+    });
 }
 
 void Widget::setupEditProfilePage() {
@@ -444,9 +447,14 @@ void Widget::onBtnSaveProfileClicked() {
 
 void Widget::onBtnBackToDashboardClicked() {
     sendCommand("LEAVE_GAME");
+
+    // درخواست آپدیت تاریخچه بازی بلافاصله بعد از بازگشت
+    if (!activeGame.isEmpty() && !currentUser.isEmpty()) {
+        sendCommand("GET_DASHBOARD:" + currentUser + ":" + activeGame);
+    }
+
     stackedWidget->setCurrentIndex(2);
     txtGameLog->clear();
-    activeGame = "";
     clearLayout(boardGrid);
     clearCheckersHighlights();
     lblRoomId->setText("Room: ----");
@@ -558,7 +566,6 @@ void Widget::onReadyRead() {
         }
     }
 
-    // این بخش باعث می‌شود دیلی صفحه دوم در پس‌زمینه برطرف شود
     if (stackedWidget->currentIndex() == 4) {
         QApplication::processEvents();
         for (int i = 0; i < boardGrid->count(); ++i) {
@@ -573,13 +580,8 @@ void Widget::onReadyRead() {
     }
 }
 
-// -----------------------------------------------------------------------
-// توابع زیر دقیقاً و مو به مو از کد ارسالی خود شما کپی شده‌اند
-// و هیچ تفاوتی با منطق سالمی که برای چکرز داشتید ندارند.
-// -----------------------------------------------------------------------
-
 void Widget::handleStateMessage(QString state) {
-    if (activeGame != "Checkers") return;
+    if (activeGame != "Checkers" && activeGame != "Othello") return;
 
     clearCheckersHighlights();
 
@@ -587,6 +589,17 @@ void Widget::handleStateMessage(QString state) {
     if (tokens.size() < 1) return;
 
     QString color = tokens[0];
+
+    if (activeGame == "Othello") {
+        if (tokens.size() > 1 && tokens[1] != "Wins" && tokens[0] != "Draw") {
+            for (int k = 1; k + 1 < tokens.size(); k += 2) {
+                validMoveCells.append({tokens[k].toInt(), tokens[k+1].toInt()});
+            }
+            txtGameLog->append(color + "'s turn. Valid moves are highlighted.");
+        }
+        applyCheckersHighlights();
+        return;
+    }
 
     if (tokens.size() >= 2 && (tokens[1] == "selected" || tokens[1] == "continue")) {
         if (tokens.size() < 4) return;
@@ -625,7 +638,8 @@ void Widget::clearCheckersHighlights() {
 }
 
 void Widget::applyCheckersHighlights() {
-    if (activeGame != "Checkers") return;
+    if (activeGame != "Checkers" && activeGame != "Othello") return;
+
     for (const auto& p : selectablePieces) {
         QLayoutItem *item = boardGrid->itemAtPosition(p.first, p.second);
         if (item && item->widget()) {
@@ -643,7 +657,7 @@ void Widget::applyCheckersHighlights() {
     for (const auto& d : validMoveCells) {
         QLayoutItem *item = boardGrid->itemAtPosition(d.first, d.second);
         if (item && item->widget()) {
-            QString bgColor = ((d.first + d.second) % 2 == 1) ? "#8D6E63" : "#D7CCC8";
+            QString bgColor = (activeGame == "Checkers") ? (((d.first + d.second) % 2 == 1) ? "#8D6E63" : "#D7CCC8") : "#1B5E20";
             item->widget()->setStyleSheet(
                 "background-color: qradialgradient(cx:0.5, cy:0.5, radius:0.35, fx:0.5, fy:0.5, "
                 "stop:0 #00E676, stop:0.36 #00E676, stop:0.37 " + bgColor + ", stop:1 " + bgColor + "); "
@@ -770,7 +784,7 @@ QString Widget::getCellStyle(QString color, QString role) {
 
     style += "background-color: " + grad + ";";
 
-    if (role == "King") style += " border: 4px solid #FFD700;";
+    if (role == "king" || role == "King") style += " border: 4px solid #FFD700;";
 
     return style;
 }

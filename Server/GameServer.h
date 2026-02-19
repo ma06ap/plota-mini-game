@@ -5,7 +5,9 @@
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QMap>
+#include <QList>
 #include <QTimer>
+#include <QDateTime>
 #include "AuthHandler.h"
 #include "Backend/Games/Checkers/Checkers.h"
 #include "Backend/Games/Othello/Othello.h"
@@ -14,16 +16,15 @@
 struct GameSession {
     QString roomId;
     QString gameType;
-    QTcpSocket* host = nullptr;
-    QTcpSocket* guest = nullptr;
-    Game* gameLogic = nullptr;
+    QTcpSocket *host = nullptr;
+    QTcpSocket *guest = nullptr;
+    Game *gameLogic = nullptr;
+    QTimer *turnTimer = nullptr;
     int hostTimeLeft = 180;
     int guestTimeLeft = 180;
-    QTimer* turnTimer = nullptr;
 };
 
-class GameServer : public QObject
-{
+class GameServer : public QObject {
     Q_OBJECT
 public:
     explicit GameServer(QObject *parent = nullptr);
@@ -42,21 +43,21 @@ private slots:
 
 private:
     QTcpServer *server;
-    QList<QTcpSocket*> allClients;
     AuthHandler *auth;
-
+    QList<QTcpSocket*> allClients;
     QMap<QString, GameSession*> sessions;
 
-    void handleCreateGame(QTcpSocket* sender, QString gameType);
-    void handleJoinGame(QTcpSocket* sender, QString roomId);
-    void handleMove(QTcpSocket* sender, int row, int col);
-    void handleLeave(QTcpSocket* sender);
+    QMap<QTcpSocket*, QString> loggedInUsers;
+
+    void handleCreateGame(QTcpSocket* senderSocket, QString gameType);
+    void handleJoinGame(QTcpSocket* senderSocket, QString roomId);
+    void handleMove(QTcpSocket* senderSocket, int row, int col);
+    void handleLeave(QTcpSocket* senderSocket);
 
     QString generateRoomId();
     GameSession* findSessionBySocket(QTcpSocket* socket);
-    void sendToClient(QTcpSocket* socket, QString msg);
     void broadcastToSession(GameSession* session, QString msg);
-    void switchTurn(GameSession* session);
+    void sendToClient(QTcpSocket* socket, QString msg);
     void endGame(GameSession* session, QString reason);
 };
 
