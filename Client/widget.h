@@ -20,6 +20,8 @@
 #include <QCryptographicHash>
 #include <QDialog>
 #include <QFormLayout>
+#include <QTableWidget>
+#include <QHeaderView>
 
 class Widget : public QWidget
 {
@@ -39,60 +41,89 @@ private slots:
     void onBtnLoginClicked();
     void onBtnSignupClicked();
     void onBtnForgotClicked();
-    void onBtnBackToMenuClicked();
+    void onBtnBackToDashboardClicked();
+
+    void openGameDashboard(QString gameName);
+    void onBtnEditProfileClicked();
+    void onBtnSaveProfileClicked();
 
 private:
     QTcpSocket *socket;
 
     QStackedWidget *stackedWidget;
-    QWidget *pageLogin;
-    QWidget *pageSelect;
-    QWidget *pageGame;
+    QWidget *pageLogin;         // Index 0
+    QWidget *pageMainMenu;      // Index 1
+    QWidget *pageGameDashboard; // Index 2
+    QWidget *pageEditProfile;   // Index 3
+    QWidget *pageGame;          // Index 4
 
+    // --- Login / Connection ---
     QLineEdit *leIp;
     QLineEdit *lePort;
     QPushButton *btnConnect;
     QTabWidget *authTabs;
     QWidget *tabLogin;
     QWidget *tabSignup;
-
     QLineEdit *leUsername;
     QLineEdit *lePassword;
     QPushButton *btnLogin;
     QPushButton *btnForgotPassword;
-
     QLineEdit *leSignupName;
     QLineEdit *leSignupUsername;
     QLineEdit *leSignupPhone;
     QLineEdit *leSignupEmail;
     QLineEdit *leSignupPassword;
     QPushButton *btnSignup;
-
     QLabel *lblStatus;
 
-    QLineEdit *leJoinId;
+    // --- Main Menu ---
+    QPushButton *btnMenuCheckers;
+    QPushButton *btnMenuOthello;
+    QPushButton *btnMenuConnect4;
+    QPushButton *btnMenuEditProfile;
+    QPushButton *btnMenuLogout;
 
+    // --- Game Dashboard ---
+    QLabel *lblDashTitle;
+    QLabel *lblDashScore;
+    QTableWidget *tblHistory;
+    QPushButton *btnDashCreate;
+    QLineEdit *leDashJoin;
+    QPushButton *btnDashJoin;
+    QPushButton *btnDashBack;
+
+    // --- Edit Profile ---
+    QLineEdit *leEditName;
+    QLineEdit *leEditUsername;
+    QLineEdit *leEditPhone;
+    QLineEdit *leEditEmail;
+    QLineEdit *leEditPassword;
+    QPushButton *btnSaveProfile;
+    QPushButton *btnEditBack;
+
+    // --- Game Page ---
     QPushButton *btnBack;
     QLabel *lblGameTitle;
-
     QLabel *lblRoomId;
     QLabel *lblHostTime;
     QLabel *lblGuestTime;
-
     QWidget *boardContainer;
     QGridLayout *boardGrid;
     QTextEdit *txtGameLog;
 
     QString activeGame;
+    QString currentUser;
 
-    // --- Checkers / Othello selection highlight state ---
+    // --- Checkers / Othello Highlights ---
     QPair<int,int> selectedCell = {-1, -1};
     QList<QPair<int,int>> validMoveCells;
     QList<QPair<int,int>> selectablePieces;
 
     void setupUI();
     void setupLoginPage();
-    void setupSelectPage();
+    void setupMainMenuPage();
+    void setupGameDashboardPage();
+    void setupEditProfilePage();
     void setupGamePage();
 
     void sendCommand(QString cmd);
