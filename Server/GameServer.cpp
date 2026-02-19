@@ -221,6 +221,7 @@ void GameServer::handleMove(QTcpSocket* senderSocket, int row, int col) {
 void GameServer::handleLeave(QTcpSocket* senderSocket) {
     GameSession* session = findSessionBySocket(senderSocket);
     if (!session) return;
+
     QString winner = (senderSocket == session->host) ? "GUEST_WON_OPPONENT_LEFT" : "HOST_WON_OPPONENT_LEFT";
     endGame(session, winner);
 }

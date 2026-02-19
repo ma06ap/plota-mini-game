@@ -17,6 +17,7 @@ public:
 
     QString getUserProfile(QString username);
     bool editProfile(QString username, QString newPassword, QString name, QString phone, QString email);
+
     int getTotalScore(QString username);
     void updateScore(QString username, int scoreChange);
     void recordMatch(QString username, QString gameType, QString opponent, QString date, QString role, QString result, int scoreChange);

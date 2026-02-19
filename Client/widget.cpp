@@ -448,13 +448,13 @@ void Widget::onBtnSaveProfileClicked() {
 void Widget::onBtnBackToDashboardClicked() {
     sendCommand("LEAVE_GAME");
 
-    // درخواست آپدیت تاریخچه بازی بلافاصله بعد از بازگشت
     if (!activeGame.isEmpty() && !currentUser.isEmpty()) {
         sendCommand("GET_DASHBOARD:" + currentUser + ":" + activeGame);
     }
 
     stackedWidget->setCurrentIndex(2);
     txtGameLog->clear();
+
     clearLayout(boardGrid);
     clearCheckersHighlights();
     lblRoomId->setText("Room: ----");
@@ -490,21 +490,32 @@ void Widget::onReadyRead() {
             stackedWidget->setCurrentIndex(1);
         }
         else if (line.startsWith("DASHBOARD_DATA:")) {
-            QStringList parts = line.split(":");
-            if(parts.size() >= 3) {
-                lblDashScore->setText("Total Score: " + parts[1]);
-                QStringList matches = parts[2].split("|");
-                tblHistory->setRowCount(matches.size());
-                for(int i=0; i<matches.size(); ++i) {
-                    QStringList mData = matches[i].split(",");
-                    if(mData.size() >= 5) {
-                        for(int j=0; j<5; ++j) {
-                            tblHistory->setItem(i, j, new QTableWidgetItem(mData[j]));
+            QString dataStr = line.mid(15);
+            int firstColon = dataStr.indexOf(':');
+
+            if (firstColon != -1) {
+                QString scoreStr = dataStr.left(firstColon);
+                QString historyStr = dataStr.mid(firstColon + 1);
+
+                lblDashScore->setText("Total Score: " + scoreStr);
+
+                if (historyStr.isEmpty()) {
+                    tblHistory->setRowCount(0);
+                } else {
+                    QStringList matches = historyStr.split("|");
+                    tblHistory->setRowCount(matches.size());
+                    for(int i = 0; i < matches.size(); ++i) {
+                        QStringList mData = matches[i].split(",");
+                        if(mData.size() >= 5) { // مطمئن میشیم دیتای ۵ ستون رو داریم
+                            for(int j = 0; j < 5; ++j) {
+                                tblHistory->setItem(i, j, new QTableWidgetItem(mData[j]));
+                            }
                         }
                     }
                 }
             }
         }
+        // ====================================================================
         else if (line.startsWith("GAME_CREATED:")) {
             QString roomId = line.mid(13);
             lblRoomId->setText("Room ID: " + roomId);
@@ -579,7 +590,6 @@ void Widget::onReadyRead() {
         this->update();
     }
 }
-
 void Widget::handleStateMessage(QString state) {
     if (activeGame != "Checkers" && activeGame != "Othello") return;
 
