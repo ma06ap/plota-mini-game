@@ -48,11 +48,11 @@ void Widget::setupUI() {
     setupEditProfilePage();
     setupGamePage();
 
-    stackedWidget->addWidget(pageLogin);         // Index 0
-    stackedWidget->addWidget(pageMainMenu);      // Index 1
-    stackedWidget->addWidget(pageGameDashboard); // Index 2
-    stackedWidget->addWidget(pageEditProfile);   // Index 3
-    stackedWidget->addWidget(pageGame);          // Index 4
+    stackedWidget->addWidget(pageLogin);
+    stackedWidget->addWidget(pageMainMenu);
+    stackedWidget->addWidget(pageGameDashboard);
+    stackedWidget->addWidget(pageEditProfile);
+    stackedWidget->addWidget(pageGame);
 
     mainLayout->addWidget(stackedWidget);
     stackedWidget->setCurrentIndex(0);
@@ -216,8 +216,27 @@ void Widget::setupGameDashboardPage() {
     QGroupBox *grpPlay = new QGroupBox("Start / Join Game");
     QVBoxLayout *lPlay = new QVBoxLayout(grpPlay);
 
+    QHBoxLayout *hCreate = new QHBoxLayout();
+
+    QLabel *lblTime = new QLabel("Time:");
+    lblTime->setStyleSheet("color: white; font-size: 11pt;");
+    comboTime = new QComboBox();
+    comboTime->addItems({"3 Minutes", "5 Minutes", "10 Minutes", "15 Minutes"});
+    comboTime->setStyleSheet("padding: 5px; font-size: 11pt;");
+
+    QLabel *lblColor = new QLabel("Color:");
+    lblColor->setStyleSheet("color: white; font-size: 11pt;");
+    comboColor = new QComboBox();
+    comboColor->setStyleSheet("padding: 5px; font-size: 11pt;");
+
+    hCreate->addWidget(lblTime);
+    hCreate->addWidget(comboTime);
+    hCreate->addSpacing(15);
+    hCreate->addWidget(lblColor);
+    hCreate->addWidget(comboColor);
+
     btnDashCreate = new QPushButton("Create New Room (Host)");
-    btnDashCreate->setStyleSheet("background-color: #E67E22; color: white; padding: 12px;");
+    btnDashCreate->setStyleSheet("background-color: #E67E22; color: white; padding: 12px; margin-top: 10px;");
     btnDashCreate->setCursor(Qt::PointingHandCursor);
 
     QHBoxLayout *hJoin = new QHBoxLayout();
@@ -230,7 +249,9 @@ void Widget::setupGameDashboardPage() {
     hJoin->addWidget(leDashJoin);
     hJoin->addWidget(btnDashJoin);
 
+    lPlay->addLayout(hCreate);
     lPlay->addWidget(btnDashCreate);
+    lPlay->addSpacing(10);
     lPlay->addLayout(hJoin);
 
     btnDashBack = new QPushButton("Back to Menu");
@@ -244,7 +265,16 @@ void Widget::setupGameDashboardPage() {
     layout->addWidget(grpPlay);
     layout->addWidget(btnDashBack);
 
-    connect(btnDashCreate, &QPushButton::clicked, [this](){ sendCommand("CREATE_GAME:" + activeGame); });
+    connect(btnDashCreate, &QPushButton::clicked, [this](){
+        int timeSec = 180;
+        if(comboTime->currentIndex() == 0) timeSec = 180;
+        else if(comboTime->currentIndex() == 1) timeSec = 300;
+        else if(comboTime->currentIndex() == 2) timeSec = 600;
+        else if(comboTime->currentIndex() == 3) timeSec = 900;
+
+        sendCommand("CREATE_GAME:" + activeGame + ":" + QString::number(timeSec) + ":" + comboColor->currentText());
+    });
+
     connect(btnDashJoin, &QPushButton::clicked, [this](){
         if(!leDashJoin->text().isEmpty()) sendCommand("JOIN_GAME:" + leDashJoin->text());
     });
@@ -317,14 +347,14 @@ void Widget::setupGamePage() {
     header->addStretch();
 
     QHBoxLayout *infoLayout = new QHBoxLayout();
-    lblHostTime = new QLabel("Host: 03:00");
+    lblHostTime = new QLabel("Host: --:--");
     lblHostTime->setStyleSheet("color: #FF5252; font-weight: bold; font-size: 12pt;");
 
     lblRoomId = new QLabel("Room: ----");
     lblRoomId->setStyleSheet("color: white; font-weight: bold; font-size: 14pt; border: 1px solid white; padding: 5px; border-radius: 5px;");
     lblRoomId->setAlignment(Qt::AlignCenter);
 
-    lblGuestTime = new QLabel("Guest: 03:00");
+    lblGuestTime = new QLabel("Guest: --:--");
     lblGuestTime->setStyleSheet("color: #FFEB3B; font-weight: bold; font-size: 12pt;");
 
     infoLayout->addWidget(lblHostTime);
@@ -429,6 +459,12 @@ void Widget::openGameDashboard(QString gameName) {
     activeGame = gameName;
     lblDashTitle->setText(gameName + " Dashboard");
     tblHistory->setRowCount(0);
+
+    comboColor->clear();
+    if (gameName == "Connect-4") comboColor->addItems({"Red", "Yellow"});
+    else if (gameName == "Checkers") comboColor->addItems({"Red", "Black"});
+    else if (gameName == "Othello") comboColor->addItems({"Black", "White"});
+
     sendCommand("GET_DASHBOARD:" + currentUser + ":" + gameName);
     stackedWidget->setCurrentIndex(2);
 }
@@ -447,19 +483,16 @@ void Widget::onBtnSaveProfileClicked() {
 
 void Widget::onBtnBackToDashboardClicked() {
     sendCommand("LEAVE_GAME");
-
     if (!activeGame.isEmpty() && !currentUser.isEmpty()) {
         sendCommand("GET_DASHBOARD:" + currentUser + ":" + activeGame);
     }
-
     stackedWidget->setCurrentIndex(2);
     txtGameLog->clear();
-
     clearLayout(boardGrid);
     clearCheckersHighlights();
     lblRoomId->setText("Room: ----");
-    lblHostTime->setText("Host: 03:00");
-    lblGuestTime->setText("Guest: 03:00");
+    lblHostTime->setText("Host: --:--");
+    lblGuestTime->setText("Guest: --:--");
 }
 
 void Widget::onReadyRead() {
@@ -492,13 +525,10 @@ void Widget::onReadyRead() {
         else if (line.startsWith("DASHBOARD_DATA:")) {
             QString dataStr = line.mid(15);
             int firstColon = dataStr.indexOf(':');
-
             if (firstColon != -1) {
                 QString scoreStr = dataStr.left(firstColon);
                 QString historyStr = dataStr.mid(firstColon + 1);
-
                 lblDashScore->setText("Total Score: " + scoreStr);
-
                 if (historyStr.isEmpty()) {
                     tblHistory->setRowCount(0);
                 } else {
@@ -506,7 +536,7 @@ void Widget::onReadyRead() {
                     tblHistory->setRowCount(matches.size());
                     for(int i = 0; i < matches.size(); ++i) {
                         QStringList mData = matches[i].split(",");
-                        if(mData.size() >= 5) { // مطمئن میشیم دیتای ۵ ستون رو داریم
+                        if(mData.size() >= 5) {
                             for(int j = 0; j < 5; ++j) {
                                 tblHistory->setItem(i, j, new QTableWidgetItem(mData[j]));
                             }
@@ -515,7 +545,6 @@ void Widget::onReadyRead() {
                 }
             }
         }
-        // ====================================================================
         else if (line.startsWith("GAME_CREATED:")) {
             QString roomId = line.mid(13);
             lblRoomId->setText("Room ID: " + roomId);
@@ -539,6 +568,13 @@ void Widget::onReadyRead() {
             QStringList parts = line.split(":");
             activeGame = parts[1];
             QString roomId = parts[2];
+            QString hostColor = parts.size() > 3 ? parts[3] : "Red";
+
+            QString guestColor;
+            if (activeGame == "Othello") guestColor = (hostColor == "Black") ? "White" : "Black";
+            else if (activeGame == "Checkers") guestColor = (hostColor == "Red") ? "Black" : "Red";
+            else guestColor = (hostColor == "Red") ? "Yellow" : "Red";
+
             lblRoomId->setText("Room ID: " + roomId);
             lblGameTitle->setText("Playing: " + activeGame);
             int r = 8, c = 8;
@@ -546,9 +582,10 @@ void Widget::onReadyRead() {
             initBoardGrid(r, c);
             boardContainer->setEnabled(true);
             txtGameLog->append(">>> GAME STARTED! <<<");
-            if (activeGame == "Connect-4")      txtGameLog->append("Red (Host) starts first.");
-            else if (activeGame == "Checkers")  txtGameLog->append("Red (Host) starts first. Click a piece to select it, then click a destination.");
-            else if (activeGame == "Othello")   txtGameLog->append("Black (Host) starts first.");
+            txtGameLog->append("Host: " + hostColor + " | Guest: " + guestColor);
+
+            if (activeGame == "Checkers")  txtGameLog->append("Click a piece to select it, then click a destination.");
+            else if (activeGame == "Othello")   txtGameLog->append("Valid moves are highlighted in green.");
         }
         else if (line.startsWith("TIME:")) {
             QStringList parts = line.split(":");
@@ -590,6 +627,7 @@ void Widget::onReadyRead() {
         this->update();
     }
 }
+
 void Widget::handleStateMessage(QString state) {
     if (activeGame != "Checkers" && activeGame != "Othello") return;
 

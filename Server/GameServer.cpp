@@ -104,7 +104,12 @@ void GameServer::onReadyRead() {
             }
         }
         else if (line.startsWith("CREATE_GAME:")) {
-            handleCreateGame(clientSocket, line.mid(12));
+            QStringList parts = line.split(":");
+            int timeLimit = 180;
+            QString hostColor = "";
+            if(parts.size() >= 3) timeLimit = parts[2].toInt();
+            if(parts.size() >= 4) hostColor = parts[3];
+            handleCreateGame(clientSocket, parts[1], timeLimit, hostColor);
         }
         else if (line.startsWith("JOIN_GAME:")) {
             handleJoinGame(clientSocket, line.mid(10));
@@ -119,15 +124,21 @@ void GameServer::onReadyRead() {
     }
 }
 
-void GameServer::handleCreateGame(QTcpSocket* senderSocket, QString gameType) {
+void GameServer::handleCreateGame(QTcpSocket* senderSocket, QString gameType, int timeLimit, QString hostColor) {
     QString roomId = generateRoomId();
 
     GameSession* session = new GameSession();
     session->roomId = roomId;
     session->gameType = gameType;
     session->host = senderSocket;
-    session->hostTimeLeft = 180;
-    session->guestTimeLeft = 180;
+    session->hostTimeLeft = timeLimit;
+    session->guestTimeLeft = timeLimit;
+
+    session->hostColor = hostColor;
+    if (session->hostColor.isEmpty()) {
+        if (gameType == "Othello") session->hostColor = "Black";
+        else session->hostColor = "Red";
+    }
 
     if (gameType == "Checkers")    session->gameLogic = new Checkers();
     else if (gameType == "Othello")    session->gameLogic = new Othello();
@@ -139,7 +150,7 @@ void GameServer::handleCreateGame(QTcpSocket* senderSocket, QString gameType) {
     sessions.insert(roomId, session);
 
     sendToClient(senderSocket, "GAME_CREATED:" + roomId);
-    emit logMessage("Game created. Room: " + roomId + " (" + gameType + ")");
+    emit logMessage("Game created. Room: " + roomId + " (" + gameType + "), Time: " + QString::number(timeLimit) + "s, Host Color: " + session->hostColor);
 }
 
 void GameServer::handleJoinGame(QTcpSocket* senderSocket, QString roomId) {
@@ -156,8 +167,7 @@ void GameServer::handleJoinGame(QTcpSocket* senderSocket, QString roomId) {
 
     session->guest = senderSocket;
     sendToClient(senderSocket, "JOIN_SUCCESS:" + session->gameType);
-
-    QString startMsg = "START_GAME:" + session->gameType + ":" + session->roomId;
+    QString startMsg = "START_GAME:" + session->gameType + ":" + session->roomId + ":" + session->hostColor;
     broadcastToSession(session, startMsg);
 
     if(session->gameLogic) {
@@ -177,11 +187,7 @@ void GameServer::handleMove(QTcpSocket* senderSocket, int row, int col) {
 
     bool isHost = (senderSocket == session->host);
     std::string currentTurn = session->gameLogic->getCurrentPlayer();
-
-    bool isHostTurn = false;
-    if (session->gameType == "Connect-4")  isHostTurn = (currentTurn == "Red");
-    else if (session->gameType == "Checkers")  isHostTurn = (currentTurn == "Red");
-    else if (session->gameType == "Othello")   isHostTurn = (currentTurn == "Black");
+    bool isHostTurn = (currentTurn == session->hostColor.toStdString());
 
     if (isHost && !isHostTurn) return;
     if (!isHost && isHostTurn) return;
@@ -199,9 +205,9 @@ void GameServer::handleMove(QTcpSocket* senderSocket, int row, int col) {
         if (res.find("Win") != std::string::npos || res.find("Wins") != std::string::npos) {
             if (session->gameType == "Othello") {
                 if (res.find("Black Wins") != std::string::npos) {
-                    endGame(session, "HOST_WON");
+                    endGame(session, (session->hostColor == "Black") ? "HOST_WON" : "GUEST_WON");
                 } else if (res.find("White Wins") != std::string::npos) {
-                    endGame(session, "GUEST_WON");
+                    endGame(session, (session->hostColor == "White") ? "HOST_WON" : "GUEST_WON");
                 }
             } else {
                 endGame(session, isHost ? "HOST_WON" : "GUEST_WON");
@@ -221,7 +227,6 @@ void GameServer::handleMove(QTcpSocket* senderSocket, int row, int col) {
 void GameServer::handleLeave(QTcpSocket* senderSocket) {
     GameSession* session = findSessionBySocket(senderSocket);
     if (!session) return;
-
     QString winner = (senderSocket == session->host) ? "GUEST_WON_OPPONENT_LEFT" : "HOST_WON_OPPONENT_LEFT";
     endGame(session, winner);
 }
@@ -230,10 +235,7 @@ void GameServer::onTurnTimerTick() {
     for (auto session : std::as_const(sessions)) {
         if (!session->gameLogic || !session->guest) continue;
         std::string turn = session->gameLogic->getCurrentPlayer();
-        bool isHostTurn = false;
-        if (session->gameType == "Connect-4")  isHostTurn = (turn == "Red");
-        else if (session->gameType == "Checkers")  isHostTurn = (turn == "Red");
-        else if (session->gameType == "Othello")   isHostTurn = (turn == "Black");
+        bool isHostTurn = (turn == session->hostColor.toStdString());
 
         if (isHostTurn) {
             session->hostTimeLeft--;
@@ -272,8 +274,11 @@ void GameServer::endGame(GameSession* session, QString reason) {
             hostResult = "Draw"; guestResult = "Draw";
         }
 
-        QString hostRole = (session->gameType == "Othello") ? "Black" : "Red";
-        QString guestRole = (session->gameType == "Othello") ? "White" : ((session->gameType == "Checkers") ? "Black" : "Yellow");
+        QString hostRole = session->hostColor;
+        QString guestRole;
+        if (session->gameType == "Othello") guestRole = (hostRole == "Black") ? "White" : "Black";
+        else if (session->gameType == "Checkers") guestRole = (hostRole == "Red") ? "Black" : "Red";
+        else guestRole = (hostRole == "Red") ? "Yellow" : "Red";
 
         auth->recordMatch(hostName, session->gameType, guestName, date, hostRole, hostResult, hostScoreChange);
         auth->recordMatch(guestName, session->gameType, hostName, date, guestRole, guestResult, guestScoreChange);

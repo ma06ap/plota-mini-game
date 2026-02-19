@@ -22,6 +22,7 @@ struct GameSession {
     QTimer *turnTimer = nullptr;
     int hostTimeLeft = 180;
     int guestTimeLeft = 180;
+    QString hostColor;
 };
 
 class GameServer : public QObject {
@@ -49,7 +50,7 @@ private:
 
     QMap<QTcpSocket*, QString> loggedInUsers;
 
-    void handleCreateGame(QTcpSocket* senderSocket, QString gameType);
+    void handleCreateGame(QTcpSocket* senderSocket, QString gameType, int timeLimit = 180, QString hostColor = "");
     void handleJoinGame(QTcpSocket* senderSocket, QString roomId);
     void handleMove(QTcpSocket* senderSocket, int row, int col);
     void handleLeave(QTcpSocket* senderSocket);

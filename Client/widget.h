@@ -84,6 +84,8 @@ private:
     QLabel *lblDashTitle;
     QLabel *lblDashScore;
     QTableWidget *tblHistory;
+    QComboBox *comboTime;
+    QComboBox *comboColor;
     QPushButton *btnDashCreate;
     QLineEdit *leDashJoin;
     QPushButton *btnDashJoin;
