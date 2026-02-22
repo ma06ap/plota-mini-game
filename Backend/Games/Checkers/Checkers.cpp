@@ -125,6 +125,22 @@ std::vector<std::pair<int,int>> Checkers::getSelectablePieces() const {
             }
         }
     }
+    // add for force to king capture if it can
+    if (mustCap) {
+        int i,j;
+        for (auto tmp : result) {
+            i = tmp.first;
+            j = tmp.second;
+            if (src.getPiece(i,j)->getRole() == "King") {
+                for (int t=0 ; t < result.size() ; t++) {
+                    std::pair<int,int> loc(result.at(t).first,result.at(t).second);
+                    if (src.getPiece(result.at(t).first,result.at(t).second)->getRole() != "King") {
+                        result.erase(result.begin()+t);
+                    } 
+                }
+            }
+        }
+    }
     return result;
 }
 
